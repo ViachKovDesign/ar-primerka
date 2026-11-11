@@ -99,3 +99,11 @@
   .preview { grid-template-columns: 1fr; }
   .topbar-note { display: none; }
 }
+
+/* Какой шаг обработки добавил ошибки валидатора */
+.blame { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #fdecea; border: 1px solid #f3c3bd; color: #7a1f14; font-size: 14px; }
+.blame p { margin: 0 0 8px; }
+.blame p:last-child { margin-bottom: 0; }
+.blame .row { gap: 8px; flex-wrap: wrap; }
+.admin-status .btn { margin: 8px 8px 0 0; }
+#export-reason { align-self: center; }

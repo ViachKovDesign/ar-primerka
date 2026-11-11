@@ -94,6 +94,8 @@
             <label class="check"><input type="checkbox" id="fix-textures" checked> Текстуры ≤ 2048 px, JPEG/PNG</label>
             <label class="check"><input type="checkbox" id="fix-simplify"> Упростить сетку до <input type="number" id="simplify-target" value="90000" step="5000" min="5000" class="num"> треугольников</label>
             <label class="check"><input type="checkbox" id="fix-anim" checked> Удалить анимации и скелет</label>
+            <label class="check"><input type="checkbox" id="fix-uv" checked> Один набор UV (вторая развёртка → первая)</label>
+            <label class="check"><input type="checkbox" id="fix-cleanup" checked> Чистка: дубликаты и неиспользуемое</label>
           </div>
         </div>
         <p class="admin-status" id="build-status" hidden></p>
@@ -103,6 +105,7 @@
             <tbody id="check-body"></tbody>
           </table>
         </div>
+        <div class="blame" id="blame-box" hidden></div>
         <details class="validator" id="validator-details" hidden>
           <summary>Сообщения glTF-валидатора</summary>
           <ul id="validator-list"></ul>
@@ -176,7 +179,8 @@
       <section class="panel" aria-labelledby="ex-title">
         <h2 id="ex-title"><span class="step">6</span>Добавить в каталог</h2>
         <div class="row">
-          <button type="button" class="btn btn-primary" id="export-zip">Добавить в каталог и скачать ZIP</button>
+          <button type="button" class="btn btn-primary" id="export-zip" aria-describedby="export-reason">Добавить в каталог и скачать ZIP</button>
+          <span class="note err" id="export-reason" role="status" hidden></span>
         </div>
         <p class="admin-status" id="export-status" hidden></p>
         <div class="howto" id="howto" hidden>
@@ -192,5 +196,24 @@
       </section>
     </div>
   </main>
+  <script>
+    // Пока инструменты админки грузятся (на медленном интернете — десятки секунд), брошенный файл
+    // не должен открываться браузером вместо админки: запоминаем его, js/admin.js подхватит после загрузки.
+    (function () {
+      window.__queuedFiles = [];
+      var stop = function (e) { e.preventDefault(); };
+      window.addEventListener('dragover', stop);
+      window.addEventListener('drop', stop);
+      var queue = function (files) {
+        if (window.__adminReady || !files || !files.length) return;
+        window.__queuedFiles = Array.prototype.slice.call(files);
+        var el = document.getElementById('boot-status');
+        el.hidden = false;
+        el.textContent = 'Файл получен (' + files[0].name + '). Подождите: инструменты админки ещё загружаются, обработка начнётся сама.';
+      };
+      document.getElementById('dropzone').addEventListener('drop', function (e) { queue(e.dataTransfer && e.dataTransfer.files); });
+      document.getElementById('file-input').addEventListener('change', function (e) { queue(e.target.files); });
+    })();
+  </script>
 </body>
 </html>

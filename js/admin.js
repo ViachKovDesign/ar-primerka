@@ -5,6 +5,7 @@
 import * as L from '../vendor/admin-libs.js';
 import * as THREE from 'three';
 import { CATEGORIES, loadCatalog, formatPrice } from './catalog.js';
+import { reduceUvSets, syncTransformTexCoords, slotLabel, readGlbJson, stripExtensionFromGlb } from './gltf-fixes.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -32,7 +33,10 @@ const S = {
   deleted: new Set(),
   dirty: false,
   sources: [],          // { name, bytes, report, info, variantNames }
-  st: { category: 'floor', scale: 1, scaleMode: '1', heightCm: '', rotY: 0, zUp: false, pivot: true, textures: true, simplify: false, simplifyTarget: 90000, stripAnim: true },
+  st: { category: 'floor', scale: 1, scaleMode: '1', heightCm: '', rotY: 0, zUp: false, pivot: true, textures: true, simplify: false, simplifyTarget: 90000, stripAnim: true, uv: true, cleanup: true, keepVariants: false },
+  blame: null,          // какой шаг обработки добавил ошибки валидатора (см. diagnose)
+  checks: null,         // итог таблицы проверок — для причины серой кнопки выгрузки
+  stripped: [],         // расширения, убранные по кнопке «Убрать и продолжить»
   variantMode: 'single', // single | ext | files | manual
   rows: [],             // { id, name, swatch, swatchTouched, src } — строки таблицы вариантов
   manual: { material: 0, threshold: 0 },
@@ -58,6 +62,9 @@ async function boot() {
     }
     renderCatalog();
     if (!$('boot-status').classList.contains('err')) $('boot-status').hidden = true;
+    window.__adminReady = true;
+    // Файл, брошенный до загрузки инструментов (см. скрипт в конце admin.html).
+    if (window.__queuedFiles?.length) loadFiles(window.__queuedFiles.splice(0));
   } catch (e) {
     status('boot-status', `Не удалось загрузить инструменты: ${e.message}`, 'err');
   }
@@ -132,11 +139,20 @@ async function loadFiles(files) {
   files = files.filter((f) => /\.glb$/i.test(f.name));
   if (!files.length) { status('load-status', 'Нужен файл .glb (glTF Binary). Если у вас .gltf, .fbx или .obj — экспортируйте в GLB (см. MODEL-SPEC.md).', 'err'); return; }
   files.sort((a, b) => a.name.localeCompare(b.name));
-  status('load-status', `Читаем ${files.length > 1 ? `${files.length} файла` : files[0].name}…`, 'busy');
+  S.stripped = [];
+  await loadSources(await Promise.all(files.map(async (f) => ({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }))));
+}
+
+async function loadSources(list) {
+  status('load-status', `Читаем ${list.length > 1 ? `${list.length} файла` : list[0].name}…`, 'busy');
   const sources = [];
-  for (const f of files) {
-    const bytes = new Uint8Array(await f.arrayBuffer());
-    const src = { name: f.name, bytes, report: null, info: null, error: null, variantNames: [] };
+  for (const { name, bytes } of list) {
+    const src = { name, bytes, report: null, info: null, error: null, variantNames: [], ext: [] };
+    try {
+      const json = readGlbJson(bytes);
+      src.ext = json.extensionsUsed ?? [];
+      src.required = json.extensionsRequired ?? [];
+    } catch { /* не GLB — скажет чтение ниже */ }
     try {
       src.report = await L.validateBytes(bytes, { maxIssues: 200 });
     } catch (e) { src.error = `Валидатор не смог прочитать файл: ${e.message ?? e}`; }
@@ -145,20 +161,22 @@ async function loadFiles(files) {
       src.info = inspectDoc(doc);
       src.variantNames = src.info.variants;
     } catch (e) {
+      console.error(e);
       src.error = /draco/i.test(e.message) ? FORBIDDEN.KHR_draco_mesh_compression
         : /ktx|basis/i.test(e.message) ? FORBIDDEN.KHR_texture_basisu
           : `Файл не читается: ${e.message}`;
+      src.fixable = strippable(src, e.message);
     }
     sources.push(src);
   }
   S.sources = sources;
   const bad = sources.find((s) => s.error);
   if (bad) {
-    status('load-status', `${bad.name}: ${bad.error}`, 'err');
+    showError('load-status', `${bad.name}: ${bad.error}`, bad.fixable ?? []);
     $('work').hidden = true;
     return;
   }
-  status('load-status', `Загружено: ${sources.map((s) => `${s.name} (${MB(s.bytes.byteLength)})`).join(', ')}`, 'ok');
+  status('load-status', `Загружено: ${sources.map((s) => `${s.name} (${MB(s.bytes.byteLength)})`).join(', ')}${S.stripped.length ? `. Убрано расширений: ${S.stripped.join(', ')}` : ''}`, 'ok');
   autoSettings();
   setupVariantMode();
   prefillCard();
@@ -167,6 +185,36 @@ async function loadFiles(files) {
   rebuild();
   $('chk-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+/**
+ * Какие расширения можно предложить убрать, если файл не читается или не обрабатывается.
+ * Сжатие геометрии/текстур не предлагаем: без него данные не прочитать (для них отдельные сообщения).
+ * Если расширение названо в тексте ошибки — предлагаем только его.
+ */
+function strippable(src, message = '') {
+  const all = (src.ext ?? []).filter((e) => !FORBIDDEN[e] && !REMOVABLE[e]);
+  const named = all.filter((e) => message.includes(e));
+  return named.length ? named : all;
+}
+
+/** Сообщение об ошибке + кнопки «Убрать <расширение> и продолжить». */
+function showError(id, text, exts) {
+  const el = $(id);
+  el.hidden = false;
+  el.className = 'admin-status err';
+  el.innerHTML = `${esc(text)}${exts.length ? `<br>Если не получается из-за расширения glTF, его можно убрать и продолжить (внешний вид может немного измениться):<br>${
+    exts.map((e) => `<button type="button" class="btn btn-small" data-strip="${esc(e)}">Убрать ${esc(e)} и продолжить</button>`).join('')}` : ''}`;
+}
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-strip]');
+  if (!b || !S.sources.length) return;
+  const ext = b.dataset.strip;
+  S.stripped.push(ext);
+  const list = S.sources.map((s) => ({ name: s.name, bytes: (s.ext ?? []).includes(ext) ? stripExtensionFromGlb(s.bytes, ext) : s.bytes }));
+  status('build-status', '');
+  await loadSources(list);
+});
 
 /** Сводка по документу: габариты, треугольники, текстуры, расширения, варианты. */
 function inspectDoc(doc) {
@@ -212,6 +260,9 @@ function autoSettings() {
   st.stripAnim = true;
   st.textures = true;
   st.pivot = true;
+  st.uv = true;
+  st.cleanup = true;
+  st.keepVariants = false;
   const sug = suggestScale(Math.max(...info.size), st.category);
   st.scaleMode = String(sug);
   st.scale = sug;
@@ -241,6 +292,8 @@ function syncControls() {
   $('fix-simplify').checked = st.simplify;
   $('simplify-target').value = st.simplifyTarget;
   $('fix-anim').checked = st.stripAnim;
+  $('fix-uv').checked = st.uv;
+  $('fix-cleanup').checked = st.cleanup;
   $('pivot-label').textContent = st.category === 'wall'
     ? 'Опора для стены: центр задней плоскости'
     : `Поставить ${st.category === 'table' ? 'на стол' : 'на пол'}: центр низа в точке опоры`;
@@ -273,12 +326,14 @@ function readControls() {
   st.simplify = $('fix-simplify').checked;
   st.simplifyTarget = Math.max(5000, Number($('simplify-target').value) || 90000);
   st.stripAnim = $('fix-anim').checked;
+  st.uv = $('fix-uv').checked;
+  st.cleanup = $('fix-cleanup').checked;
 }
 
 let rebuildTimer;
 function scheduleRebuild() { clearTimeout(rebuildTimer); rebuildTimer = setTimeout(rebuild, 350); }
 
-for (const id of ['scale-mode', 'height-cm', 'z-up', 'fix-pivot', 'fix-textures', 'fix-simplify', 'simplify-target', 'fix-anim']) {
+for (const id of ['scale-mode', 'height-cm', 'z-up', 'fix-pivot', 'fix-textures', 'fix-simplify', 'simplify-target', 'fix-anim', 'fix-uv', 'fix-cleanup']) {
   $(id).addEventListener('change', () => { readControls(); syncControls(); scheduleRebuild(); });
 }
 $('height-cm').addEventListener('input', () => { readControls(); scheduleRebuild(); });
@@ -308,6 +363,10 @@ async function applyFixes(doc, st) {
     if (e.extensionName === 'EXT_meshopt_compression' || e.extensionName === 'KHR_mesh_quantization') e.dispose();
   }
 
+  // Один набор UV. Текстуры второй развёртки переводятся на первую, если развёртки совпадают,
+  // иначе убираются с предупреждением (обычно AO). См. js/gltf-fixes.js.
+  const uvWarnings = st.uv ? reduceUvSets(doc) : [];
+
   // Ориентация и масштаб: всё содержимое сцены — под один корневой узел.
   const wrap = doc.createNode('AR_Root');
   for (const child of [...scene.listChildren()]) { scene.removeChild(child); wrap.addChild(child); }
@@ -335,7 +394,11 @@ async function applyFixes(doc, st) {
     const c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
     wrap.setTranslation(st.category === 'wall' ? [-c[0], -c[1], -b.min[2]] : [-c[0], -b.min[1], -c[2]]);
   }
-  await doc.transform(L.dedup(), L.prune());
+  // keepAttributes: наборы UV сводим сами (выше). prune() сдвигает TEXCOORD_n, но не трогает
+  // KHR_texture_transform.texCoord — из-за этого SheenChair получал ошибку MESH_PRIMITIVE_TOO_FEW_TEXCOORDS.
+  if (st.cleanup) await doc.transform(L.dedup(), L.prune({ keepAttributes: true }));
+  syncTransformTexCoords(doc);
+  return { uvWarnings };
 }
 
 async function fixTextures(doc) {
@@ -528,7 +591,9 @@ function renderVariantUi() {
   $('variant-note').textContent = {
     ext: 'В файле есть варианты (KHR_materials_variants). Каждый станет отдельным GLB — так его увидит и Android Scene Viewer.',
     files: 'Каждый файл — отдельный вариант. Исправления масштаба и опоры применяются ко всем одинаково (рассчитываются по первому файлу).',
-    single: 'У товара будет один вариант. Чтобы добавить цвета, выберите «Добавить цвета вручную».',
+    single: S.st.keepVariants
+      ? 'Один файл с KHR_materials_variants как есть (нарезка выключена из-за ошибок). Scene Viewer на Android покажет только вариант по умолчанию.'
+      : 'У товара будет один вариант. Чтобы добавить цвета, выберите «Добавить цвета вручную».',
     manual: 'Первая строка — исходный цвет модели. Для остальных выберите цвет: он заменит оттенок выбранного материала.',
   }[m];
   $('var-body').innerHTML = S.rows.map((r, i) => {
@@ -543,7 +608,7 @@ function renderVariantUi() {
   }).join('');
 }
 
-$('variant-mode').addEventListener('change', (e) => { S.variantMode = e.target.value; resetRows(); scheduleRebuild(); });
+$('variant-mode').addEventListener('change', (e) => { S.variantMode = e.target.value; S.st.keepVariants = false; resetRows(); scheduleRebuild(); });
 $('manual-material').addEventListener('change', (e) => { S.manual.material = +e.target.value; renderVariantUi(); scheduleRebuild(); });
 $('manual-threshold').addEventListener('input', (e) => { S.manual.threshold = +e.target.value; $('threshold-val').textContent = `${e.target.value}%`; scheduleRebuild(); });
 $('manual-add').addEventListener('click', () => {
@@ -573,6 +638,91 @@ $('var-body').addEventListener('click', (e) => {
 // =====================================================================
 // Сборка всех вариантов + проверка результата
 // =====================================================================
+/** Собирает один вариант с заданными настройками. Ничего не меняет в S. */
+async function buildOne(r, st, { swatch: wantSwatch = true } = {}) {
+  const src = S.variantMode === 'files' ? S.sources[r.src] : S.sources[0];
+  const doc = await io.readBinary(src.bytes);
+  let prefer = new Set();
+  if (!st.keepVariants) {
+    if (S.variantMode === 'ext') prefer = setVariantFromExt(doc, r.src);
+    dropVariantsExt(doc);
+  }
+  if (S.variantMode === 'manual') prefer = new Set([doc.getRoot().listMaterials()[S.manual.material]].filter(Boolean));
+  if (S.variantMode === 'manual' && r.src) await applyManualColor(doc, S.manual.material, r.src, S.manual.threshold);
+  // Цвет кружка — до исправлений: dedup может заменить объекты материалов.
+  const swatch = wantSwatch ? (r.swatchTouched ? r.swatch : await guessSwatch(doc, prefer)) : null;
+  const { uvWarnings } = await applyFixes(doc, st);
+  const bytes = await io.writeBinary(doc);
+  const report = await L.validateBytes(bytes, { maxIssues: 50 });
+  return { src, doc, bytes, report, swatch, uvWarnings, srcErr: src.report?.issues.numErrors ?? 0 };
+}
+
+// Шаги обработки, которые можно выключить. Если после обработки ошибок валидатора больше, чем в исходнике,
+// diagnose() пересобирает вариант без каждого шага по очереди и находит виноватый.
+const STEPS = [
+  { key: 'textures', label: 'Сжатие текстур (JPEG/PNG, ≤ 2048 px)', on: (st, a) => st.textures && a.textures.length > 0 },
+  { key: 'keepVariants', label: 'Нарезка вариантов (KHR_materials_variants)', on: (st, a) => !st.keepVariants && a.variants.length > 0, off: true },
+  { key: 'stripAnim', label: 'Удаление анимаций и скелета', on: (st, a) => st.stripAnim && (a.animations > 0 || a.skins > 0) },
+  { key: 'simplify', label: 'Упрощение сетки', on: (st) => st.simplify },
+  { key: 'uv', label: 'Один набор UV', on: (st, a) => st.uv && a.uvSets > 1 },
+  { key: 'cleanup', label: 'Чистка (dedup / prune)', on: (st) => st.cleanup },
+];
+const stepOff = (st, step) => ({ ...st, [step.key]: step.off ?? false });
+const errCodes = (report) => (report?.issues.messages ?? []).filter((m) => m.severity === 0).map((m) => m.code);
+
+async function diagnose(built, seq) {
+  const idx = built.findIndex((b) => b.report.issues.numErrors > b.srcErr);
+  if (idx < 0) return null;
+  const b = built[idx];
+  const srcCodes = new Set(errCodes(b.src.report));
+  const newCodes = [...new Set(errCodes(b.report).filter((c) => !srcCodes.has(c)))];
+  const tried = [];
+  for (const step of STEPS.filter((x) => x.on(S.st, b.src.info))) {
+    status('build-status', `Ищем шаг, который добавил ошибки: проверяем без «${step.label}»…`, 'busy');
+    const res = await buildOne(S.rows[idx], stepOff(S.st, step), { swatch: false });
+    if (seq !== S.buildSeq) return undefined;
+    tried.push({ step, errs: res.report.issues.numErrors });
+  }
+  return {
+    idx, variant: S.rows[idx].name, srcErr: b.srcErr, outErr: b.report.issues.numErrors, newCodes, tried,
+    culprits: tried.filter((t) => t.errs <= b.srcErr).map((t) => t.step),
+  };
+}
+
+function renderBlame() {
+  const box = $('blame-box');
+  const bl = S.blame;
+  box.hidden = !bl;
+  if (!bl) return;
+  const head = `<p><strong>Обработка добавила ошибки валидатора.</strong> ${S.built.length > 1 ? `Вариант «${esc(bl.variant)}»: ` : ''}в исходнике ${bl.srcErr}, после обработки ${bl.outErr}${bl.newCodes.length ? ` (${bl.newCodes.map(esc).join(', ')})` : ''}.</p>`;
+  if (bl.culprits.length) {
+    box.innerHTML = `${head}<p>Виноват шаг: ${bl.culprits.map((c) => `«${esc(c.label)}»`).join(' или ')} — без него ошибок не больше, чем в исходнике.</p>
+      <div class="row">${bl.culprits.map((c) => `<button type="button" class="btn btn-small" data-skip-step="${c.key}">Выгрузить без шага «${esc(c.label)}»</button>`).join('')}</div>`;
+  } else {
+    box.innerHTML = `${head}<p>${bl.tried.length
+      ? `Ни один шаг по отдельности не объясняет новые ошибки (проверены: ${bl.tried.map((t) => `«${esc(t.step.label)}» → ${t.errs}`).join(', ')}). Выключайте исправления по очереди вручную или пришлите файл разработчику.`
+      : 'Выключаемых шагов нет — пришлите файл разработчику.'}</p>`;
+  }
+}
+
+$('blame-box').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-skip-step]');
+  if (!b) return;
+  const key = b.dataset.skipStep;
+  if (key === 'keepVariants') {
+    // Без нарезки: один файл с KHR_materials_variants как есть.
+    S.st.keepVariants = true;
+    S.variantMode = 'single';
+    const radio = document.querySelector('#variant-mode input[value="single"]');
+    if (radio) radio.checked = true;
+    resetRows();
+  } else {
+    S.st[key] = false;
+    syncControls();
+  }
+  rebuild();
+});
+
 async function rebuild() {
   if (!S.sources.length) return;
   const seq = ++S.buildSeq;
@@ -582,36 +732,30 @@ async function rebuild() {
     const built = [];
     for (let i = 0; i < S.rows.length; i++) {
       const r = S.rows[i];
-      const src = S.variantMode === 'files' ? S.sources[r.src] : S.sources[0];
-      const doc = await io.readBinary(src.bytes);
-      let prefer = new Set();
-      if (S.variantMode === 'ext') prefer = setVariantFromExt(doc, r.src);
-      dropVariantsExt(doc);
-      if (S.variantMode === 'manual') prefer = new Set([doc.getRoot().listMaterials()[S.manual.material]].filter(Boolean));
-      if (S.variantMode === 'manual' && r.src) await applyManualColor(doc, S.manual.material, r.src, S.manual.threshold);
-      // Цвет кружка — до исправлений: dedup может заменить объекты материалов.
-      const swatch = r.swatchTouched ? r.swatch : await guessSwatch(doc, prefer);
-      await applyFixes(doc, S.st);
+      const res = await buildOne(r, S.st);
       if (seq !== S.buildSeq) return; // настройки поменялись — эта сборка устарела
-      const bytes = await io.writeBinary(doc);
-      const report = await L.validateBytes(bytes, { maxIssues: 50 });
-      if (!r.swatchTouched) r.swatch = swatch;
-      built.push({ id: r.id, name: r.name, swatch: r.swatch, bytes, doc, report });
+      if (!r.swatchTouched) r.swatch = res.swatch;
+      built.push({ id: r.id, name: r.name, swatch: r.swatch, ...res });
     }
     if (seq !== S.buildSeq) return;
+    const blame = await diagnose(built, seq);
+    if (blame === undefined) return;
+    S.blame = blame;
     S.built.forEach((b) => b.url && URL.revokeObjectURL(b.url));
     S.built = built;
     S.builtInfo = inspectDoc(built[0].doc);
     S.pv = Math.min(S.pv, built.length - 1);
     status('build-status', '');
     renderChecks();
+    renderBlame();
     renderVariantUi();
     renderPreviewVariants();
     fillDims();
     await showPreview();
   } catch (e) {
     console.error(e);
-    status('build-status', `Ошибка обработки: ${e.message}`, 'err');
+    if (seq !== S.buildSeq) return;
+    showError('build-status', `Ошибка обработки: ${e.message}`, strippable(S.sources[0], e.message ?? ''));
   }
 }
 
@@ -626,7 +770,8 @@ function renderChecks() {
   const srcErr = src.report?.issues.numErrors ?? 0, srcWarn = src.report?.issues.numWarnings ?? 0;
   const outErr = Math.max(...S.built.map((x) => x.report.issues.numErrors));
   add(outErr ? 'err' : 'ok', 'glTF-валидатор (Khronos)', `ошибок ${srcErr}, предупр. ${srcWarn}`, `ошибок ${outErr}`,
-    outErr ? 'Scene Viewer не откроет модель с ошибками — нужна правка в 3D-редакторе.' : srcErr ? 'Ошибки исходника исправлены пересохранением.' : '');
+    S.blame ? 'Ошибки добавила обработка — какой шаг виноват, написано под таблицей.'
+      : outErr ? 'Scene Viewer не откроет модель с ошибками — нужна правка в 3D-редакторе.' : srcErr ? 'Ошибки исходника исправлены пересохранением.' : '');
 
   // Вес
   const srcMB = src.bytes.byteLength / 1048576;
@@ -670,17 +815,29 @@ function renderChecks() {
   const remov = a.ext.filter((e) => REMOVABLE[e]);
   const leftBad = b.ext.filter((e) => FORBIDDEN[e] || REMOVABLE[e]);
   add(forb.length || leftBad.length ? 'err' : remov.length ? 'info' : 'ok', 'Расширения glTF', a.ext.join(', ') || 'нет', b.ext.join(', ') || 'нет',
-    [...forb.map((e) => FORBIDDEN[e]), ...remov.map((e) => REMOVABLE[e])].join(' '));
+    [...forb.map((e) => FORBIDDEN[e]), ...remov.map((e) => REMOVABLE[e]), S.stripped.length ? `Убрано по вашей команде: ${S.stripped.join(', ')}.` : ''].join(' ').trim());
 
   // Анимации
   if (a.animations || a.skins) add(b.animations || b.skins ? 'warn' : 'ok', 'Анимации / скелет', `${a.animations} / ${a.skins}`, `${b.animations} / ${b.skins}`, b.animations ? 'Для мебели не нужны — включите удаление.' : '');
 
   // UV
-  if (a.uvSets > 1) add('info', 'Наборы UV', String(a.uvSets), String(b.uvSets), 'Scene Viewer использует только первый.');
+  if (a.uvSets > 1) {
+    const lost = new Map(); // слот → материалы
+    for (const x of S.built) for (const w of x.uvWarnings ?? []) {
+      if (!lost.has(w.slot)) lost.set(w.slot, new Set());
+      lost.get(w.slot).add(w.material);
+    }
+    const lostText = [...lost].map(([slot, mats]) => `${slotLabel(slot)} — у материалов ${[...mats].map((m) => `«${m}»`).join(', ')}`).join('; ');
+    add(lost.size ? 'warn' : 'info', 'Наборы UV', String(a.uvSets), String(b.uvSets),
+      !st.uv ? 'Второй набор оставлен как есть.'
+        : lost.size ? `Убрано: ${lostText}. Эти текстуры лежали на второй развёртке (TEXCOORD_1), а она не совпадает с первой — на первую они не лягут. Если затенение важно, запеките его в основную текстуру в 3D-редакторе.`
+          : 'Сведено к одному набору: текстуры второй развёртки переведены на первую (развёртки совпадают).');
+  }
 
   // Варианты
-  add('ok', 'Варианты', a.variants.length ? `${a.variants.length} в файле (KHR_materials_variants)` : S.sources.length > 1 ? `${S.sources.length} файла` : 'нет',
-    `${S.built.length} отдельных GLB`, '');
+  add(st.keepVariants ? 'warn' : 'ok', 'Варианты', a.variants.length ? `${a.variants.length} в файле (KHR_materials_variants)` : S.sources.length > 1 ? `${S.sources.length} файла` : 'нет',
+    st.keepVariants ? '1 GLB с вариантами внутри' : `${S.built.length} отдельных GLB`,
+    st.keepVariants ? 'Нарезка выключена: Scene Viewer на Android покажет только вариант по умолчанию.' : '');
 
   $('check-body').innerHTML = rows.map((r) => `<tr>
     <td class="st st-${r.state}" aria-label="${{ ok: 'норма', warn: 'внимание', err: 'ошибка', info: 'информация' }[r.state]}"></td>
@@ -695,7 +852,27 @@ function renderChecks() {
   $('validator-details').hidden = !msgs.length;
   $('validator-list').innerHTML = msgs.slice(0, 60).map((m) =>
     `<li class="${m.severity === 0 ? 'e' : ''}">[${m.where}] ${m.severity === 0 ? 'Ошибка' : 'Предупр.'} ${esc(m.code)}: ${esc(m.message)} <code>${esc(m.pointer ?? '')}</code></li>`).join('');
-  $('export-zip').disabled = outErr > 0 || forb.length > 0 || outMax > LIMITS.errMB || scaleState === 'err';
+  S.checks = { outErr, forb, outMax, scaleState };
+  updateExportState();
+}
+
+/** Почему нельзя выгрузить — пишем рядом с серой кнопкой. */
+function exportBlockers() {
+  const out = [];
+  const c = S.checks;
+  if (!c) return ['Сначала загрузите модель (шаг 1)'];
+  if (!$('f-name').value.trim()) out.push('Заполните название (шаг 5)');
+  if (c.outErr) out.push(`Ошибки валидатора после обработки: ${c.outErr} (шаг 2)`);
+  if (c.forb.length) out.push(`Недопустимое расширение: ${c.forb.join(', ')} (шаг 2)`);
+  if (c.outMax > LIMITS.errMB) out.push(`Файл больше ${LIMITS.errMB} МБ — уменьшите текстуры или упростите сетку (шаг 2)`);
+  if (c.scaleState === 'err') out.push('Неверный масштаб — проверьте единицы модели (шаг 2)');
+  return out;
+}
+function updateExportState() {
+  const reasons = exportBlockers();
+  $('export-zip').disabled = reasons.length > 0;
+  $('export-reason').hidden = !reasons.length;
+  $('export-reason').textContent = reasons.length ? `Кнопка недоступна: ${reasons.join('; ')}.` : '';
 }
 const fmtSigned = (m) => `${m >= 0 ? '+' : '−'}${fmtLen(Math.abs(m))}`;
 
@@ -793,6 +970,7 @@ function prefillCard() {
   $('f-id').value = slug(base);
   $('f-id').dataset.auto = '1';
 }
+$('f-name').addEventListener('input', updateExportState);
 $('f-name').addEventListener('input', () => {
   if ($('f-id').dataset.auto === '1' && $('f-name').value.trim()) $('f-id').value = slug($('f-name').value);
 });
