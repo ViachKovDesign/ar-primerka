@@ -30,9 +30,10 @@ export const CATEGORIES = {
 // только если свой WebXR недоступен или не открылся: его WebXR, затем Scene Viewer. iPhone: Quick Look.
 export const AR_MODES = 'webxr scene-viewer quick-look';
 
-// Фон 3D-просмотра и картинки каталога: "dark" — для светлых предметов, "light" — для тёмных.
-// Без поля — нейтральный средне-серый.
-const BG = new Set(['light', 'dark']);
+// Фон 3D-просмотра и картинки каталога: "dark" — для светлых предметов, "light" — для тёмных,
+// "mid" — нейтральный средне-серый (смешанные предметы). Поле варианта важнее поля товара;
+// если нет ни того, ни другого — тоже средне-серый. Выставляет админка (js/showcase-bg.js).
+const BG = new Set(['light', 'dark', 'mid']);
 
 export async function loadCatalog(url = 'catalog.json') {
   const res = await fetch(url, { cache: 'no-cache' });

@@ -37,7 +37,7 @@
           "id": "mustard",
           "name": "Горчичный",
           "swatch": "#b8892a",
-          "bg": "dark",
+          "bg": "light",
           "model": "models/chair/mustard.glb"
         },
         {
@@ -79,7 +79,7 @@
           "id": "grey-stone",
           "name": "Серый камень",
           "swatch": "#9c9a96",
-          "bg": "dark",
+          "bg": "light",
           "model": "models/coffee-table/grey-stone.glb"
         },
         {
@@ -191,6 +191,7 @@
           "id": "black",
           "name": "Чёрная",
           "swatch": "#232326",
+          "bg": "mid",
           "model": "models/table-lamp/black.glb"
         }
       ],
