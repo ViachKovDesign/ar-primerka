@@ -223,7 +223,7 @@
         {
           "id": "navy",
           "name": "Navy",
-          "swatch": "#191919",
+          "swatch": "#1f2d4f",
           "bg": "light",
           "model": "models/divan-izognutyy/navy.glb"
         },
