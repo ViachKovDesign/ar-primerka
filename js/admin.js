@@ -5,6 +5,7 @@
 import * as L from '../vendor/admin-libs.js';
 import * as THREE from 'three';
 import { CATEGORIES, loadCatalog, formatPrice } from './catalog.js';
+import { guessShowcaseBg, averageLinear } from './showcase-bg.js';
 import { reduceUvSets, syncTransformTexCoords, slotLabel, readGlbJson, stripExtensionFromGlb } from './gltf-fixes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -85,7 +86,7 @@ function renderCatalog() {
   $('cat-count').textContent = `· ${items.length - S.deleted.size}`;
   $('cat-body').innerHTML = items.map((it, i) => `
     <tr class="${S.deleted.has(it.id) ? 'deleted' : ''}">
-      <td>${it.poster ? `<img class="cat-thumb" src="${esc(it.poster)}" alt="">` : ''}</td>
+      <td>${it.poster ? `<img class="cat-thumb stage-bg"${it.bg && it.bg !== 'mid' ? ` data-bg="${esc(it.bg)}"` : ''} src="${esc(it.poster)}" alt="">` : ''}</td>
       <td><input type="text" data-i="${i}" data-k="name" value="${esc(it.name)}" aria-label="Название"><span class="sub note">${esc(it.id)}</span></td>
       <td><input type="number" class="num" data-i="${i}" data-k="price" value="${it.price ?? ''}" min="0" step="100" aria-label="Цена"></td>
       <td><select data-i="${i}" data-k="category" aria-label="Категория">${Object.entries(CATEGORIES).map(([k, c]) =>
@@ -421,6 +422,15 @@ function textureNeedsAlpha(root, tex) {
   return root.listMaterials().some((m) => m.getBaseColorTexture() === tex && m.getAlphaMode() !== 'OPAQUE');
 }
 
+/** Средний линейный цвет текстуры (для автоподбора фона витрины). */
+async function avgTextureLinear(bytes, mime) {
+  const bmp = await decodeImage(bytes, mime);
+  const c = new OffscreenCanvas(16, 16);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, 16, 16);
+  return averageLinear(ctx.getImageData(0, 0, 16, 16).data);
+}
+
 async function decodeImage(bytes, mime) {
   return createImageBitmap(new Blob([bytes], { type: mime }), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
 }
@@ -601,7 +611,7 @@ function renderVariantUi() {
     return `<tr>
       <td><input type="color" data-i="${i}" data-k="swatch" value="${esc(r.swatch)}" aria-label="Цвет кружка"></td>
       <td><input type="text" data-i="${i}" data-k="name" value="${esc(r.name)}" aria-label="Название варианта"></td>
-      <td><input type="text" data-i="${i}" data-k="id" value="${esc(r.id)}" aria-label="Код варианта" pattern="[a-z0-9-]+"></td>
+      <td><input type="text" data-i="${i}" data-k="id" value="${esc(r.id)}" aria-label="Код варианта" pattern="[a-z0-9\\-]+"></td>
       <td>${b ? MB(b.bytes.byteLength) : '…'}</td>
       <td>${m === 'manual' && i > 0 ? `<button type="button" class="btn btn-small btn-danger" data-rm="${i}">Убрать</button>` : ''}</td>
     </tr>`;
@@ -736,6 +746,7 @@ async function rebuild() {
       if (seq !== S.buildSeq) return; // настройки поменялись — эта сборка устарела
       if (!r.swatchTouched) r.swatch = res.swatch;
       built.push({ id: r.id, name: r.name, swatch: r.swatch, ...res });
+      built.at(-1).autoBg = (await guessShowcaseBg(res.doc, avgTextureLinear)).bg; // фон витрины
     }
     if (seq !== S.buildSeq) return;
     const blame = await diagnose(built, seq);
@@ -886,6 +897,17 @@ function renderPreviewVariants() {
     `<label><input type="radio" name="pv" value="${i}" ${i === S.pv ? 'checked' : ''}><span><span class="dot" style="display:inline-block;vertical-align:-2px;margin-right:6px;background:${esc(S.rows[i]?.swatch)}"></span>${esc(S.rows[i]?.name ?? b.name)}</span></label>`).join('');
 }
 $('pv-variants').addEventListener('change', (e) => { S.pv = +e.target.value; showPreview(); });
+
+// Фон на витрине (поле bg в catalog.json): авто по яркости модели или вручную для всех вариантов.
+const BG_LABEL = { dark: 'тёмно-серый (светлый предмет)', light: 'светлый (тёмный предмет)', mid: 'средне-серый (смешанный предмет)' };
+const bgFor = (i) => $('pv-bg').value || S.built[i]?.autoBg || 'mid';
+function renderBg() {
+  const autos = [...new Set(S.built.map((b) => b.autoBg))];
+  $('pv-bg').options[0].textContent = `Авто: ${autos.length === 1 ? BG_LABEL[autos[0]] : 'свой у каждого варианта'}`;
+  const bg = bgFor(S.pv);
+  if (bg === 'mid') delete viewer.dataset.bg; else viewer.dataset.bg = bg;
+}
+$('pv-bg').addEventListener('change', renderBg);
 $('pv-human').addEventListener('change', (e) => { S.human = e.target.checked; showPreview(); });
 
 function fillDims() {
@@ -907,6 +929,7 @@ async function showPreview() {
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = URL.createObjectURL(new Blob([bytes], { type: 'model/gltf-binary' }));
   viewer.src = previewUrl;
+  renderBg();
   $('usdz-result').textContent = '';
 }
 
@@ -1002,7 +1025,8 @@ $('export-zip').addEventListener('click', async () => {
       description: $('f-desc').value.trim() || undefined,
       option_label: $('f-option').value.trim() || 'Вариант',
       poster: `posters/${id}.webp`,
-      variants: S.built.map((b, i) => ({ id: slug(S.rows[i].id), name: S.rows[i].name, swatch: S.rows[i].swatch, model: `models/${id}/${slug(S.rows[i].id)}.glb` })),
+      bg: bgFor(0),
+      variants: S.built.map((b, i) => ({ id: slug(S.rows[i].id), name: S.rows[i].name, swatch: S.rows[i].swatch, bg: bgFor(i), model: `models/${id}/${slug(S.rows[i].id)}.glb` })),
       source: { files: S.sources.map((s) => s.name), added: new Date().toISOString().slice(0, 10) },
     };
     const catalog = catalogForExport(item);

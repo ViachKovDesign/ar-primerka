@@ -145,13 +145,21 @@
         <h2 id="pv-title"><span class="step">4</span>Превью</h2>
         <div class="preview">
           <div class="preview-stage">
-            <model-viewer id="admin-viewer" camera-controls shadow-intensity="1" shadow-softness="0.35"
+            <model-viewer id="admin-viewer" class="stage-bg" camera-controls shadow-intensity="1" shadow-softness="0.6"
               exposure="1.05" environment-image="neutral" camera-orbit="-25deg 75deg auto" interaction-prompt="none"
               alt="Превью загруженной модели"></model-viewer>
           </div>
           <div class="preview-side">
             <div class="dims" id="pv-dims"></div>
             <div class="seg seg-wrap" id="pv-variants"></div>
+            <label class="field"><span class="label">Фон на витрине (как в превью)</span>
+              <select id="pv-bg">
+                <option value="">Авто</option>
+                <option value="dark">Тёмно-серый — для светлых предметов</option>
+                <option value="light">Светлый — для тёмных предметов</option>
+                <option value="mid">Средне-серый — для смешанных</option>
+              </select>
+            </label>
             <label class="check"><input type="checkbox" id="pv-human"> Показать человека 175 см рядом</label>
             <button type="button" class="btn btn-secondary btn-small" id="usdz-test">Проверить сборку для iPhone (USDZ)</button>
             <p class="note" id="usdz-result"></p>
