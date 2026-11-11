@@ -93,7 +93,7 @@ function renderCatalog() {
   $('catalog-grid').innerHTML = list.map((item) => `
     <li>
       <a class="card" href="?item=${encodeURIComponent(item.id)}" data-item="${esc(item.id)}">
-        <div class="card-img">
+        <div class="card-img stage-bg"${item.bg ? ` data-bg="${item.bg}"` : ''}>
           ${posterUrl(item) ? `<img src="${esc(posterUrl(item))}" alt="" width="400" height="400" loading="lazy" decoding="async">` : ''}
         </div>
         <div class="card-body">
@@ -157,6 +157,10 @@ function setVariant(variant) {
   $('variant-name').textContent = variant.name;
   const input = [...$('swatches').querySelectorAll('input')].find((i) => i.value === variant.id);
   if (input) input.checked = true;
+
+  // Фон под тон предмета: светлым — тёмно-серый, тёмным — светлый (поле bg в catalog.json).
+  const bg = variant.bg ?? item.bg;
+  if (bg) viewer.dataset.bg = bg; else delete viewer.dataset.bg;
 
   const src = modelUrl(item, variant);
   if (viewer.src !== src) {

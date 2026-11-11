@@ -1,7 +1,7 @@
 :root {
   --bg: #faf8f4;
   --surface: #ffffff;
-  --stage: #efebe4;
+  --stage: #b9b9b7; /* средний серый: запасной цвет, если градиенты не поддерживаются */
   --ink: #22201d;
   --muted: #6d675f;
   --line: #e4ded4;
@@ -55,7 +55,7 @@ p { margin: 0; }
   transition: transform .2s ease, box-shadow .2s ease;
 }
 .card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -14px rgba(34, 32, 29, .35); }
-.card-img { aspect-ratio: 1; background: var(--stage); display: grid; place-items: center; }
+.card-img { aspect-ratio: 1; background: var(--stage); display: grid; place-items: center; --floor-y: 88%; }
 .card-img img { width: 88%; height: 88%; object-fit: contain; }
 .card-body { padding: 12px 12px 14px; display: grid; gap: 4px; }
 .card-title { font-weight: 650; font-size: 16px; }
@@ -70,6 +70,28 @@ p { margin: 0; }
 .load-error { grid-column: 1 / -1; color: var(--notice-ink); background: var(--notice-bg); padding: 14px; border-radius: 12px; }
 .card-dots { display: flex; gap: 6px; margin-top: 6px; }
 .dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .12); }
+
+/* ---------- Фон 3D-просмотра и картинок каталога ----------
+   Нейтральный серый градиент: светлее вверху, темнее к полу, плюс подсвеченное пятно «пола»
+   под предметом. Тон выбирается по предмету: data-bg="dark" — тёмно-серый фон для светлых
+   предметов, data-bg="light" — светлый для тёмных, без атрибута — средний серый.
+   Поле "bg" в catalog.json (у товара и, при необходимости, у варианта) выставляет админка. */
+@property --stage-top { syntax: '<color>'; inherits: true; initial-value: #d2d2d0; }
+@property --stage-bottom { syntax: '<color>'; inherits: true; initial-value: #9b9b99; }
+@property --stage-floor { syntax: '<color>'; inherits: true; initial-value: rgb(255 255 255 / .32); }
+.stage-bg {
+  --stage-top: #d2d2d0; --stage-bottom: #9b9b99; --stage-floor: rgb(255 255 255 / .32);
+  background-color: var(--stage-bottom);
+  background-image:
+    radial-gradient(ellipse 62% 20% at 50% var(--floor-y, 90%), var(--stage-floor), transparent 75%),
+    linear-gradient(180deg, var(--stage-top) 0%, var(--stage-bottom) 100%);
+  transition: --stage-top .35s ease, --stage-bottom .35s ease, --stage-floor .35s ease;
+}
+.stage-bg[data-bg="dark"] { --stage-top: #8a8c8f; --stage-bottom: #545659; --stage-floor: rgb(255 255 255 / .26); }
+.stage-bg[data-bg="light"] { --stage-top: #f3f3f1; --stage-bottom: #c6c6c4; --stage-floor: rgb(255 255 255 / .6); }
+.stage-bg[data-bg="dark"] .progress { background: rgb(255 255 255 / .18); }
+.stage-bg[data-bg="dark"] .progress-fill { background: #fff; }
+@media (prefers-reduced-motion: reduce) { .stage-bg { transition: none; } }
 
 /* ---------- Карточка предмета ---------- */
 .back {
