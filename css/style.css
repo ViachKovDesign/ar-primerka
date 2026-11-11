@@ -60,6 +60,14 @@ p { margin: 0; }
 .card-body { padding: 12px 12px 14px; display: grid; gap: 4px; }
 .card-title { font-weight: 650; font-size: 16px; }
 .card-meta { color: var(--muted); font-size: 13px; }
+.card-price { font-weight: 650; font-size: 15px; font-variant-numeric: tabular-nums; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 16px; }
+.chip {
+  min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 15px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.load-error { grid-column: 1 / -1; color: var(--notice-ink); background: var(--notice-bg); padding: 14px; border-radius: 12px; }
 .card-dots { display: flex; gap: 6px; margin-top: 6px; }
 .dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .12); }
 
@@ -89,6 +97,7 @@ model-viewer {
 .details { display: grid; gap: 14px; align-content: start; }
 .details h1 { font-size: clamp(26px, 6vw, 34px); }
 .subtitle { color: var(--muted); margin-top: -8px; }
+.price { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .dims {
   justify-self: start; font-size: 14px; font-variant-numeric: tabular-nums;
   padding: 6px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line);

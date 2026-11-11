@@ -33,6 +33,7 @@
         <h1 id="catalog-title">Посмотрите мебель у себя дома</h1>
         <p>Выберите предмет и цвет, затем нажмите «Посмотреть в комнате»: камера телефона покажет его в реальном размере.</p>
       </div>
+      <div class="filters" id="filters" role="group" aria-label="Категория" hidden></div>
       <ul class="grid" id="catalog-grid"></ul>
     </section>
 
@@ -83,6 +84,7 @@
         <div class="details">
           <h1 id="product-title"></h1>
           <p class="subtitle" id="product-subtitle"></p>
+          <p class="price" id="product-price"></p>
           <p class="dims" id="product-dims"></p>
 
           <fieldset class="variants">
@@ -157,7 +159,7 @@
       <div class="xr-msg" data-for="ready"><span>Кольцо — где встанет предмет.<br><strong>Коснитесь экрана, чтобы поставить</strong></span></div>
     </div>
     <div class="xr-bottom">
-      <div class="xr-msg xr-msg-ok" data-for="placed"><span class="ar-dot"></span><span><span class="xr-placed-text">Стоит на полу</span> · проведите пальцем, чтобы повернуть</span></div>
+      <div class="xr-msg xr-msg-ok" data-for="placed"><span class="ar-dot"></span><span><span class="xr-placed-text">Стоит на полу</span><span class="xr-rotate-hint"> · проведите пальцем, чтобы повернуть</span></span></div>
       <button type="button" id="xr-reset" class="xr-btn xr-reset" data-for="placed">Переставить</button>
     </div>
   </div>

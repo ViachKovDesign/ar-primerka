@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <title>Админка каталога — AR-примерка</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2322201d'/%3E%3Cpath d='M9 21v-6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6M7 21h18M10 21v3M22 21v3' stroke='%23faf8f4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/build/three.module.min.js", "three/addons/": "./vendor/three/examples/jsm/" } }
+  </script>
+  <script type="module" src="vendor/model-viewer-module.min.js"></script>
+  <script type="module" src="js/admin.js"></script>
+</head>
+<body class="admin">
+  <header class="topbar">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M9 21v-6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6M7 21h18M10 21v3M22 21v3" stroke="#faf8f4" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <span>Примерка</span>
+    </a>
+    <span class="topbar-note">админка каталога · прототип</span>
+    <a class="topbar-link" href="./">Открыть сайт →</a>
+  </header>
+
+  <main>
+    <p class="admin-lead">Всё обрабатывается в этом браузере: файлы никуда не загружаются. Готовый результат скачивается архивом, его нужно выложить на сайт (инструкция — после выгрузки). Требования к моделям — в <a href="https://github.com/ViachKovDesign/ar-primerka/blob/main/MODEL-SPEC.md" rel="noopener">MODEL-SPEC.md</a>.</p>
+    <p class="admin-status" id="boot-status">Загрузка инструментов…</p>
+
+    <!-- ============ Каталог ============ -->
+    <section class="panel" aria-labelledby="cat-title">
+      <div class="panel-head">
+        <h2 id="cat-title">Каталог <span class="count" id="cat-count"></span></h2>
+        <button type="button" class="btn btn-secondary" id="cat-download" disabled>Скачать catalog.json</button>
+      </div>
+      <div class="table-wrap">
+        <table class="cat-table">
+          <thead><tr><th></th><th>Товар</th><th>Цена, ₽</th><th>Категория</th><th>Вариантов</th><th></th></tr></thead>
+          <tbody id="cat-body"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="cat-dirty" hidden>Есть несохранённые изменения. Скачайте catalog.json и замените им файл в репозитории.<span id="cat-deleted-note"></span></p>
+    </section>
+
+    <!-- ============ 1. Загрузка ============ -->
+    <section class="panel" aria-labelledby="up-title">
+      <h2 id="up-title"><span class="step">1</span>Добавить товар: загрузите GLB</h2>
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".glb,model/gltf-binary" multiple>
+        <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <strong>Перетащите сюда файл .glb</strong>
+        <span>или нажмите, чтобы выбрать. Несколько файлов = по файлу на вариант (<code>артикул__вариант.glb</code>).</span>
+      </label>
+      <p class="admin-status" id="load-status" hidden></p>
+    </section>
+
+    <div id="work" hidden>
+      <!-- ============ 2. Проверка и исправления ============ -->
+      <section class="panel" aria-labelledby="chk-title">
+        <h2 id="chk-title"><span class="step">2</span>Проверка и исправления</h2>
+        <div class="fix-grid">
+          <div class="field">
+            <span class="label">Куда ставится</span>
+            <div class="seg" id="category" role="radiogroup">
+              <label><input type="radio" name="category" value="floor" checked><span>На пол</span></label>
+              <label><input type="radio" name="category" value="table"><span>На стол</span></label>
+              <label><input type="radio" name="category" value="wall"><span>На стену</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">Единицы модели</span>
+            <select id="scale-mode">
+              <option value="1">Метры (как есть)</option>
+              <option value="0.01">Сантиметры → ×0.01</option>
+              <option value="0.001">Миллиметры → ×0.001</option>
+              <option value="0.0254">Дюймы → ×0.0254</option>
+              <option value="height">По известной высоте…</option>
+            </select>
+            <span class="inline" id="height-wrap" hidden><input type="number" id="height-cm" min="1" step="0.1" inputmode="decimal"> см</span>
+            <span class="note" id="scale-note"></span>
+          </div>
+          <div class="field">
+            <span class="label">Ориентация</span>
+            <div class="row">
+              <button type="button" class="btn btn-small" id="rot-left">⟲ 90°</button>
+              <button type="button" class="btn btn-small" id="rot-right">⟳ 90°</button>
+              <label class="check"><input type="checkbox" id="z-up"> Модель лежит на боку (Z вверх)</label>
+            </div>
+          </div>
+          <div class="field checks">
+            <label class="check"><input type="checkbox" id="fix-pivot" checked> <span id="pivot-label">Поставить на пол: центр низа в точке опоры</span></label>
+            <label class="check"><input type="checkbox" id="fix-textures" checked> Текстуры ≤ 2048 px, JPEG/PNG</label>
+            <label class="check"><input type="checkbox" id="fix-simplify"> Упростить сетку до <input type="number" id="simplify-target" value="90000" step="5000" min="5000" class="num"> треугольников</label>
+            <label class="check"><input type="checkbox" id="fix-anim" checked> Удалить анимации и скелет</label>
+          </div>
+        </div>
+        <p class="admin-status" id="build-status" hidden></p>
+        <div class="table-wrap">
+          <table class="check-table">
+            <thead><tr><th></th><th>Проверка</th><th>Исходный файл</th><th>После обработки</th></tr></thead>
+            <tbody id="check-body"></tbody>
+          </table>
+        </div>
+        <details class="validator" id="validator-details" hidden>
+          <summary>Сообщения glTF-валидатора</summary>
+          <ul id="validator-list"></ul>
+        </details>
+      </section>
+
+      <!-- ============ 3. Варианты ============ -->
+      <section class="panel" aria-labelledby="var-title">
+        <h2 id="var-title"><span class="step">3</span>Варианты цвета и ткани</h2>
+        <div class="seg" id="variant-mode" role="radiogroup"></div>
+        <p class="note" id="variant-note"></p>
+        <div id="manual-box" hidden>
+          <div class="fix-grid">
+            <div class="field">
+              <span class="label">Какой материал перекрашивать</span>
+              <select id="manual-material"></select>
+              <span class="note" id="manual-material-note"></span>
+            </div>
+            <div class="field" id="threshold-wrap">
+              <span class="label">Не трогать области темнее: <strong id="threshold-val">0%</strong></span>
+              <input type="range" id="manual-threshold" min="0" max="80" value="0">
+              <span class="note">Нужно, если на одной текстуре и ткань, и тёмное дерево/металл.</span>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="var-table">
+            <thead><tr><th>Цвет</th><th>Название для покупателя</th><th>Код (латиница)</th><th>Вес</th><th></th></tr></thead>
+            <tbody id="var-body"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-secondary btn-small" id="manual-add" hidden>+ Добавить цвет</button>
+      </section>
+
+      <!-- ============ 4. Превью ============ -->
+      <section class="panel" aria-labelledby="pv-title">
+        <h2 id="pv-title"><span class="step">4</span>Превью</h2>
+        <div class="preview">
+          <div class="preview-stage">
+            <model-viewer id="admin-viewer" camera-controls shadow-intensity="1" shadow-softness="0.35"
+              exposure="1.05" environment-image="neutral" camera-orbit="-25deg 75deg auto" interaction-prompt="none"
+              alt="Превью загруженной модели"></model-viewer>
+          </div>
+          <div class="preview-side">
+            <div class="dims" id="pv-dims"></div>
+            <div class="seg seg-wrap" id="pv-variants"></div>
+            <label class="check"><input type="checkbox" id="pv-human"> Показать человека 175 см рядом</label>
+            <button type="button" class="btn btn-secondary btn-small" id="usdz-test">Проверить сборку для iPhone (USDZ)</button>
+            <p class="note" id="usdz-result"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 5. Карточка ============ -->
+      <section class="panel" aria-labelledby="card-title">
+        <h2 id="card-title"><span class="step">5</span>Карточка товара</h2>
+        <div class="form-grid">
+          <label class="field"><span class="label">Название *</span><input type="text" id="f-name" placeholder="Кресло «Мира»"></label>
+          <label class="field"><span class="label">Код товара (для адреса и папки)</span><input type="text" id="f-id" placeholder="kreslo-mira"></label>
+          <label class="field"><span class="label">Цена, ₽</span><input type="number" id="f-price" min="0" step="100" inputmode="numeric"></label>
+          <label class="field"><span class="label">Подзаголовок</span><input type="text" id="f-subtitle" placeholder="Мягкое кресло с деревянными ножками"></label>
+          <label class="field"><span class="label">Как называть варианты</span><input type="text" id="f-option" value="Цвет" placeholder="Обивка / Цвет / Отделка"></label>
+          <div class="field"><span class="label">Габариты, см (из модели, можно поправить для подписи)</span>
+            <div class="row"><input type="number" id="f-w" class="num" title="Ширина"> × <input type="number" id="f-d" class="num" title="Глубина"> × <input type="number" id="f-h" class="num" title="Высота"></div>
+          </div>
+          <label class="field field-wide"><span class="label">Описание</span><textarea id="f-desc" rows="3"></textarea></label>
+        </div>
+      </section>
+
+      <!-- ============ 6. Выгрузка ============ -->
+      <section class="panel" aria-labelledby="ex-title">
+        <h2 id="ex-title"><span class="step">6</span>Добавить в каталог</h2>
+        <div class="row">
+          <button type="button" class="btn btn-primary" id="export-zip">Добавить в каталог и скачать ZIP</button>
+        </div>
+        <p class="admin-status" id="export-status" hidden></p>
+        <div class="howto" id="howto" hidden>
+          <h3>Как опубликовать</h3>
+          <ol>
+            <li>Распакуйте скачанный архив — внутри <code>catalog.json</code>, папки <code>models/</code> и <code>posters/</code>.</li>
+            <li>Откройте репозиторий на GitHub → <strong>Add file → Upload files</strong>.</li>
+            <li>Перетащите в окно <strong>всё содержимое</strong> распакованной папки (файл и обе папки). <code>catalog.json</code> заменится, новые модели добавятся.</li>
+            <li>Внизу нажмите <strong>Commit changes</strong>. Через 1–2 минуты товар появится на сайте.</li>
+          </ol>
+          <p class="note">Если работаете через git: распакуйте архив в папку проекта, затем <code>git add .</code>, <code>git commit</code>, <code>git push</code>.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

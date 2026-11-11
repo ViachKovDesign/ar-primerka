@@ -1,4 +1,4 @@
-import { CATALOG, modelUrl, posterUrl } from './catalog.js';
+import { loadCatalog, CATEGORIES, AR_MODES, modelUrl, posterUrl, formatPrice } from './catalog.js';
 
 const $ = (id) => document.getElementById(id);
 const viewer = $('viewer');
@@ -13,7 +13,10 @@ const isMobile = Boolean(navigator.userAgentData?.mobile) || isIOS || isAndroid
 const isInApp = /FBAN|FBAV|Instagram|Telegram|VKClient|OKApp|Line\/|MicroMessenger|; wv\)/i.test(ua);
 const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) || location.protocol === 'file:';
 
-const state = { item: null, variant: null, arFailed: false, sceneViewerFailed: false, lastPath: '—' };
+const state = { item: null, variant: null, arFailed: false, sceneViewerFailed: false, lastPath: '—', filter: 'all' };
+let CATALOG = [];
+let CURRENCY = 'RUB';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ---------- Отладка (?debug=1) ----------
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -77,48 +80,69 @@ function updateDebug() {
 }
 
 // ---------- Каталог ----------
+function renderFilters() {
+  const present = Object.keys(CATEGORIES).filter((c) => CATALOG.some((it) => it.category === c));
+  const box = $('filters');
+  box.hidden = present.length < 2;
+  box.innerHTML = [['all', 'Все'], ...present.map((c) => [c, CATEGORIES[c].label])].map(([id, label]) =>
+    `<button type="button" class="chip" data-filter="${id}" aria-pressed="${state.filter === id}">${label}</button>`).join('');
+}
+
 function renderCatalog() {
-  $('catalog-grid').innerHTML = CATALOG.map((item) => `
+  const list = CATALOG.filter((it) => state.filter === 'all' || it.category === state.filter);
+  $('catalog-grid').innerHTML = list.map((item) => `
     <li>
-      <a class="card" href="?item=${item.id}" data-item="${item.id}">
+      <a class="card" href="?item=${encodeURIComponent(item.id)}" data-item="${esc(item.id)}">
         <div class="card-img">
-          <img src="${posterUrl(item)}" alt="" width="400" height="400" loading="lazy" decoding="async">
+          ${posterUrl(item) ? `<img src="${esc(posterUrl(item))}" alt="" width="400" height="400" loading="lazy" decoding="async">` : ''}
         </div>
         <div class="card-body">
-          <span class="card-title">${item.name}</span>
+          <span class="card-title">${esc(item.name)}</span>
+          ${item.price != null ? `<span class="card-price">${formatPrice(item.price, CURRENCY)}</span>` : ''}
           <span class="card-meta">${dims(item)}</span>
-          <span class="card-dots" aria-label="${item.variants.length} варианта">
-            ${item.variants.map((v) => `<span class="dot" style="background:${v.swatch}"></span>`).join('')}
+          <span class="card-dots" aria-label="Вариантов: ${item.variants.length}">
+            ${item.variants.map((v) => `<span class="dot" style="background:${esc(v.swatch || '#ccc')}"></span>`).join('')}
           </span>
         </div>
       </a>
     </li>`).join('');
 }
 
-const dims = ({ size: { w, d, h } }) => `${w} × ${d} × ${h} см`;
+$('filters').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-filter]');
+  if (!b) return;
+  state.filter = b.dataset.filter;
+  renderFilters();
+  renderCatalog();
+});
+
+const dims = ({ size_cm: { w, d, h } }) => `${w} × ${d} × ${h} см`;
 
 // ---------- Карточка ----------
 function showProduct(item, variant) {
   state.item = item;
+  const cat = CATEGORIES[item.category];
   $('product-title').textContent = item.name;
-  $('product-subtitle').textContent = item.subtitle;
+  $('product-subtitle').textContent = item.subtitle ?? '';
+  $('product-subtitle').hidden = !item.subtitle;
+  $('product-price').textContent = formatPrice(item.price, CURRENCY);
+  $('product-price').hidden = item.price == null;
   $('product-dims').textContent = `Ш × Г × В: ${dims(item)}`;
-  $('product-description').textContent = item.description;
-  $('option-label').textContent = item.optionLabel;
-  viewer.setAttribute('ar-modes', item.arModes);
-  viewer.setAttribute('ar-placement', 'floor'); // floor = любая горизонтальная поверхность, в т.ч. стол
+  $('product-description').textContent = item.description ?? '';
+  $('option-label').textContent = item.option_label;
+  viewer.setAttribute('ar-modes', AR_MODES);
+  viewer.setAttribute('ar-placement', cat.arPlacement); // floor = любая горизонтальная поверхность, в т.ч. стол
   // Жёсткий масштаб 1:1 во всех режимах: WebXR — без щипка, Scene Viewer — resizable=false,
   // Quick Look — #allowsContentScaling=0 (всё это model-viewer делает по ar-scale="fixed").
   viewer.setAttribute('ar-scale', 'fixed');
-  const surface = item.placement === 'table' ? 'столом' : 'полом';
-  $('ar-prompt-text').textContent = `Поводите телефоном над ${surface}`;
-  $('ar-placed-text').textContent = `Стоит на ${item.placement === 'table' ? 'столе' : 'полу'} · перетащите, чтобы сдвинуть`;
+  $('ar-prompt-text').textContent = `Поводите телефоном ${item.category === 'wall' ? 'перед' : 'над'} ${cat.surface}`;
+  $('ar-placed-text').textContent = `${cat.placed} · перетащите, чтобы сдвинуть`;
   viewer.alt = `${item.name}: 3D-модель, ${dims(item)}`;
 
   $('swatches').innerHTML = item.variants.map((v) => `
-    <label class="swatch" title="${v.name}">
-      <input type="radio" name="variant" value="${v.id}" aria-label="${v.name}">
-      <span style="background:${v.swatch}"></span>
+    <label class="swatch" title="${esc(v.name)}">
+      <input type="radio" name="variant" value="${esc(v.id)}" aria-label="${esc(v.name)}">
+      <span style="background:${esc(v.swatch || '#ccc')}"></span>
     </label>`).join('');
 
   setVariant(variant);
@@ -131,7 +155,7 @@ function setVariant(variant) {
   const item = state.item;
   state.variant = variant;
   $('variant-name').textContent = variant.name;
-  const input = $('swatches').querySelector(`input[value="${variant.id}"]`);
+  const input = [...$('swatches').querySelectorAll('input')].find((i) => i.value === variant.id);
   if (input) input.checked = true;
 
   const src = modelUrl(item, variant);
@@ -168,7 +192,7 @@ async function updateArUi() {
   if (canAR) {
     $('ar-block').hidden = false;
     $('qr-block').hidden = true;
-    $('ar-hint').textContent = state.item?.placeHint ?? '';
+    $('ar-hint').textContent = state.item ? CATEGORIES[state.item.category].hint : '';
   } else if (!isMobile) {
     $('ar-block').hidden = true;
     $('qr-block').hidden = false;
@@ -221,7 +245,7 @@ $('ar-button').addEventListener('click', () => {
   if (xr.mod && xr.supported && !xr.failed) {
     xr.mod.startAR({
       url: modelUrl(state.item, state.variant),
-      placement: state.item.placement,
+      placement: state.item.category,
       overlay: $('xr-overlay'),
       debugEl: DEBUG ? $('xr-debug') : null,
       log: dlog,
@@ -300,6 +324,13 @@ document.addEventListener('click', (e) => {
 });
 window.addEventListener('popstate', route);
 
+try {
+  ({ items: CATALOG, currency: CURRENCY } = await loadCatalog());
+} catch (e) {
+  $('catalog-grid').innerHTML = `<li class="load-error">Не удалось загрузить каталог (${esc(e.message)}). Обновите страницу.</li>`;
+  dlog(`catalog.json: ${e.message}`);
+}
+renderFilters();
 renderCatalog();
 route();
 if (DEBUG) {

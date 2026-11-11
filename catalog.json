@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "currency": "RUB",
+  "updated": "2026-11-11",
+  "items": [
+    {
+      "id": "chair",
+      "name": "Кресло",
+      "subtitle": "Мягкое кресло с резной рамой",
+      "price": 34900,
+      "category": "floor",
+      "size_cm": {
+        "w": 85,
+        "d": 77,
+        "h": 107
+      },
+      "description": "Глубокая посадка, широкие подлокотники, рама из тёмного дерева. Обивка — плотная мебельная ткань.",
+      "option_label": "Обивка",
+      "poster": "posters/chair.webp",
+      "variants": [
+        {
+          "id": "linen-grey",
+          "name": "Светло-серый лён",
+          "swatch": "#bdb7ac",
+          "model": "models/chair/linen-grey.glb"
+        },
+        {
+          "id": "graphite",
+          "name": "Графит",
+          "swatch": "#4a4c50",
+          "model": "models/chair/graphite.glb"
+        },
+        {
+          "id": "mustard",
+          "name": "Горчичный",
+          "swatch": "#b8892a",
+          "model": "models/chair/mustard.glb"
+        },
+        {
+          "id": "emerald",
+          "name": "Изумруд",
+          "swatch": "#2f6b55",
+          "model": "models/chair/emerald.glb"
+        }
+      ],
+      "source": {
+        "origin": "Poly Haven ArmChair_01 (CC0)"
+      }
+    },
+    {
+      "id": "coffee-table",
+      "name": "Журнальный стол",
+      "subtitle": "Круглая каменная столешница",
+      "price": 27500,
+      "category": "floor",
+      "size_cm": {
+        "w": 130,
+        "d": 130,
+        "h": 49
+      },
+      "description": "Столешница из камня на гнутых металлических ножках. Подходит к дивану и паре кресел.",
+      "option_label": "Отделка",
+      "poster": "posters/coffee-table.webp",
+      "variants": [
+        {
+          "id": "white-stone",
+          "name": "Белый камень",
+          "swatch": "#e6e4df",
+          "model": "models/coffee-table/white-stone.glb"
+        },
+        {
+          "id": "grey-stone",
+          "name": "Серый камень",
+          "swatch": "#9c9a96",
+          "model": "models/coffee-table/grey-stone.glb"
+        },
+        {
+          "id": "graphite",
+          "name": "Графит",
+          "swatch": "#3b3c3f",
+          "model": "models/coffee-table/graphite.glb"
+        },
+        {
+          "id": "white-brass",
+          "name": "Белый камень, латунь",
+          "swatch": "linear-gradient(135deg,#e6e4df 50%,#b8893b 50%)",
+          "model": "models/coffee-table/white-brass.glb"
+        }
+      ],
+      "source": {
+        "origin": "Poly Haven coffee_table_round_01 (CC0)"
+      }
+    },
+    {
+      "id": "floor-lamp",
+      "name": "Торшер",
+      "subtitle": "Абажур-барабан на тонкой стойке",
+      "price": 12900,
+      "category": "floor",
+      "size_cm": {
+        "w": 45,
+        "d": 45,
+        "h": 160
+      },
+      "description": "Стальная стойка и тяжёлое основание, тканевый абажур с мягким рассеянным светом.",
+      "option_label": "Абажур",
+      "poster": "posters/floor-lamp.webp",
+      "variants": [
+        {
+          "id": "white-linen",
+          "name": "Белый лён",
+          "swatch": "#e4dccd",
+          "model": "models/floor-lamp/white-linen.glb"
+        },
+        {
+          "id": "sand",
+          "name": "Песочный",
+          "swatch": "#cdb48d",
+          "model": "models/floor-lamp/sand.glb"
+        },
+        {
+          "id": "sage",
+          "name": "Шалфей",
+          "swatch": "#97a58e",
+          "model": "models/floor-lamp/sage.glb"
+        },
+        {
+          "id": "black",
+          "name": "Чёрный",
+          "swatch": "#2b2b2d",
+          "model": "models/floor-lamp/black.glb"
+        }
+      ],
+      "source": {
+        "origin": "scripts/make-lamps.mjs (CC0)"
+      }
+    },
+    {
+      "id": "table-lamp",
+      "name": "Настольная лампа",
+      "subtitle": "Керамическое основание, тканевый абажур",
+      "price": 6900,
+      "category": "table",
+      "size_cm": {
+        "w": 28,
+        "d": 28,
+        "h": 45
+      },
+      "description": "Компактная лампа для тумбы или рабочего стола. Основание из глазурованной керамики, латунный патрон.",
+      "option_label": "Основание",
+      "poster": "posters/table-lamp.webp",
+      "variants": [
+        {
+          "id": "white",
+          "name": "Белая керамика",
+          "swatch": "#efece5",
+          "model": "models/table-lamp/white.glb"
+        },
+        {
+          "id": "terracotta",
+          "name": "Терракота",
+          "swatch": "#b8613f",
+          "model": "models/table-lamp/terracotta.glb"
+        },
+        {
+          "id": "sage",
+          "name": "Шалфей",
+          "swatch": "#93a38d",
+          "model": "models/table-lamp/sage.glb"
+        },
+        {
+          "id": "black",
+          "name": "Чёрная",
+          "swatch": "#232326",
+          "model": "models/table-lamp/black.glb"
+        }
+      ],
+      "source": {
+        "origin": "scripts/make-lamps.mjs (CC0)"
+      }
+    }
+  ]
+}

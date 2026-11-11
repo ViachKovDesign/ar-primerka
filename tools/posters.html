@@ -16,7 +16,8 @@
   <model-viewer id="mv" shadow-intensity="1" shadow-softness="0.8" exposure="1.05" environment-image="neutral"
     camera-orbit="-30deg 75deg auto" interaction-prompt="none"></model-viewer>
   <script type="module">
-    import { CATALOG, modelUrl } from '../js/catalog.js';
+    import { loadCatalog, modelUrl } from '../js/catalog.js';
+    const { items: CATALOG } = await loadCatalog('../catalog.json');
     const mv = document.getElementById('mv');
     const log = (s) => (document.getElementById('log').textContent += s + '\n');
     await customElements.whenDefined('model-viewer');

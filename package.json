@@ -8,16 +8,20 @@
     "fetch": "node scripts/fetch-sources.mjs",
     "models": "node scripts/build-models.mjs && node scripts/make-lamps.mjs && node scripts/check-sizes.mjs && node scripts/validate-models.mjs",
     "validate": "node scripts/validate-models.mjs",
-    "vendor": "node scripts/copy-vendor.mjs",
+    "vendor": "node scripts/copy-vendor.mjs && npm run admin-libs",
     "build": "npm run vendor && npm run models",
-    "serve": "node scripts/dev-server.mjs"
+    "serve": "node scripts/dev-server.mjs",
+    "admin-libs": "esbuild scripts/admin-libs-entry.mjs --bundle --format=esm --platform=browser --minify --external:node:* --external:fs --external:path --outfile=vendor/admin-libs.js --log-level=warning"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
     "@gltf-transform/functions": "^4.5.1",
     "@google/model-viewer": "^4.4.0",
+    "esbuild-wasm": "^0.28.2",
+    "fflate": "^0.8.3",
     "gltf-validator": "^2.0.0-dev.3.10",
+    "meshoptimizer": "^1.3.0",
     "qrcode-generator": "^2.0.4",
     "sharp": "^0.35.5",
     "three": "^0.183.2"

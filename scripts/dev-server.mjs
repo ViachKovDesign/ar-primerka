@@ -31,6 +31,17 @@ createServer(async (req, res) => {
       res.writeHead(200).end('ok');
       return;
     }
+    // Только для локальной проверки админки: сохранить присланный файл в test-assets/out/.
+    if (req.method === 'POST' && url.pathname === '/__save') {
+      const name = (url.searchParams.get('name') || '').replace(/[^a-z0-9._-]/gi, '');
+      if (!name) { res.writeHead(400).end(); return; }
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      await mkdir('test-assets/out', { recursive: true });
+      await writeFile(join('test-assets/out', name), Buffer.concat(chunks));
+      res.writeHead(200).end('ok');
+      return;
+    }
     let path = normalize(join(ROOT, decodeURIComponent(url.pathname)));
     if (!path.startsWith(ROOT)) { res.writeHead(403).end(); return; }
     if ((await stat(path).catch(() => null))?.isDirectory()) path = join(path, 'index.html');

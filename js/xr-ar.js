@@ -13,6 +13,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const UP_MIN = 0.85;            // cos ~32°: всё, что круче, — не пол/не столешница
+const WALL_MAX = 0.3;           // |up.y| меньше — вертикальная поверхность (стена)
 const LOST_AFTER_MS = 1200;     // столько без попаданий — «поверхность потеряна»
 const SMOOTH = 0.35;            // сглаживание движения кольца (меньше — плавнее)
 
@@ -103,8 +104,11 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  model.position.set(-center.x, -box.min.y, -center.z); // на всякий случай: центр по X/Z, низ на 0
-  const footR = Math.max(0.08, Math.hypot(size.x, size.z) / 2);
+  const wall = placement === 'wall';
+  // Опора: пол/стол — центр низа; стена — центр задней плоскости (задняя грань к стене).
+  if (wall) model.position.set(-center.x, -center.y, -box.min.z);
+  else model.position.set(-center.x, -box.min.y, -center.z);
+  const footR = Math.max(0.08, wall ? Math.hypot(size.x, size.y) / 2 : Math.hypot(size.x, size.z) / 2);
   log(`модель ${(size.x * 100).toFixed(0)}×${(size.z * 100).toFixed(0)}×${(size.y * 100).toFixed(0)} см`);
 
   const root = new THREE.Group();
@@ -118,6 +122,7 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
     new THREE.ShadowMaterial({ opacity: 0.38 }),
   );
   shadowPlane.position.y = 0.001;
+  if (wall) { shadowPlane.rotation.x = Math.PI / 2; shadowPlane.position.set(0, 0, 0.001); }
   shadowPlane.receiveShadow = true;
   root.add(shadowPlane);
   const sc = sun.shadow.camera;
@@ -134,7 +139,11 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
   // Стрелка «перед предмета» — куда он будет смотреть (на вас).
   const arrow = new THREE.Mesh(new THREE.CircleGeometry(0.03, 3).rotateX(-Math.PI / 2).rotateY(Math.PI / 2), ringMat);
   arrow.position.z = footR + 0.04;
-  reticle.add(fill, ring, dot, arrow);
+  // Для стены всё кольцо поворачиваем в вертикальную плоскость (лицом от стены), стрелку не показываем.
+  const reticleFace = new THREE.Group();
+  reticleFace.add(fill, ring, dot);
+  if (wall) reticleFace.rotation.x = Math.PI / 2; else reticleFace.add(arrow);
+  reticle.add(reticleFace);
   reticle.visible = false;
   scene.add(reticle);
 
@@ -151,9 +160,15 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
   const camPos = new THREE.Vector3(), q = new THREE.Quaternion(), up = new THREE.Vector3();
   let stats = { hits: 0, upY: 0, fps: 0 }, frames = 0, fpsAt = performance.now();
 
-  const surface = placement === 'table' ? 'столом' : 'полом';
-  overlay.querySelector('.xr-search-text').textContent = `Поводите телефоном над ${surface}`;
-  overlay.querySelector('.xr-placed-text').textContent = placement === 'table' ? 'Стоит на столе' : 'Стоит на полу';
+  const TEXT = {
+    floor: ['Поводите телефоном над полом', 'Стоит на полу'],
+    table: ['Поводите телефоном над столом', 'Стоит на столе'],
+    wall: ['Поводите телефоном перед стеной', 'Висит на стене'],
+  }[placement] ?? ['Поводите телефоном над полом', 'Стоит на полу'];
+  overlay.querySelector('.xr-search-text').textContent = TEXT[0];
+  overlay.querySelector('.xr-placed-text').textContent = TEXT[1];
+  let wallYaw = 0;
+  overlay.querySelector('.xr-rotate-hint').hidden = wall;
   setState(overlay, 'searching');
 
   function yawToCamera(p) { return Math.atan2(camPos.x - p.x, camPos.z - p.z); }
@@ -162,7 +177,7 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
     if (placed || !reticle.visible) return;
     placed = true;
     root.position.copy(reticlePos);
-    root.rotation.set(0, yawToCamera(reticlePos), 0);
+    root.rotation.set(0, wall ? wallYaw : yawToCamera(reticlePos), 0);
     root.visible = true;
     reticle.visible = false;
     setState(overlay, 'placed');
@@ -194,7 +209,7 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
   const drag = overlay.querySelector('.xr-drag');
   let dragX = null;
   const onDown = (e) => { if (placed) dragX = e.clientX; };
-  const onMove = (e) => { if (placed && dragX != null) { root.rotation.y += (e.clientX - dragX) * 0.012; dragX = e.clientX; } };
+  const onMove = (e) => { if (placed && !wall && dragX != null) { root.rotation.y += (e.clientX - dragX) * 0.012; dragX = e.clientX; } };
   const onUp = () => { dragX = null; };
   drag.addEventListener('pointerdown', onDown);
   drag.addEventListener('pointermove', onMove);
@@ -224,13 +239,16 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
         q.set(o.x, o.y, o.z, o.w);
         up.set(0, 1, 0).applyQuaternion(q);
         stats.upY = up.y;
-        if (up.y >= UP_MIN) { found = { h, p: pose.transform.position }; break; }
+        if (!wall && up.y >= UP_MIN) { found = { h, p: pose.transform.position }; break; }
+        // Стена: нормаль горизонтальна; предмет смотрит вдоль нормали (от стены к вам).
+        if (wall && Math.abs(up.y) <= WALL_MAX) { found = { h, p: pose.transform.position, yaw: Math.atan2(up.x, up.z) }; break; }
       }
       if (found) {
         targetPos.set(found.p.x, found.p.y, found.p.z);
         if (!reticle.visible) reticlePos.copy(targetPos); else reticlePos.lerp(targetPos, SMOOTH);
         reticle.position.copy(reticlePos);
-        reticle.rotation.set(0, yawToCamera(reticlePos), 0); // всегда ровно, стрелка к вам
+        if (wall) wallYaw = found.yaw;
+        reticle.rotation.set(0, wall ? wallYaw : yawToCamera(reticlePos), 0); // всегда ровно, стрелка к вам
         const pulse = 1 + 0.04 * Math.sin(t / 220);
         ring.scale.setScalar(pulse);
         reticle.visible = true;
@@ -247,7 +265,8 @@ async function setup(session, { url, placement, overlay, debugEl, log, onEnd }) 
 
     // Свет сверху-сбоку от предмета — тень ложится рядом, а не под ним целиком.
     const base = root.visible ? root.position : reticlePos;
-    sun.position.set(base.x + 0.6, base.y + size.y + 2.5, base.z + 0.9);
+    if (wall) sun.position.set(base.x + Math.sin(wallYaw) * 2 + 0.3, base.y + 1.5, base.z + Math.cos(wallYaw) * 2);
+    else sun.position.set(base.x + 0.6, base.y + size.y + 2.5, base.z + 0.9);
     sun.target.position.copy(base);
 
     renderer.render(scene, camera);

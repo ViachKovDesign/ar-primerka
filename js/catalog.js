@@ -1,80 +1,60 @@
-// Каталог: предметы, реальные размеры, варианты и файлы моделей.
-// Каждый вариант — отдельный GLB с «запечённым» цветом, чтобы цвет сохранялся во всех AR-режимах.
-// Android: основной режим — собственный WebXR (js/xr-ar.js: кольцо-указатель, постановка по касанию,
-// якорь, масштаб 1:1). Эти ar-modes model-viewer использует, только если свой WebXR недоступен
-// или не открылся: сначала его WebXR, затем Scene Viewer. iPhone: Quick Look.
-const AR_MODES = 'webxr scene-viewer quick-look';
+// Каталог читается из catalog.json (его выгружает админка). Здесь — загрузка, проверка полей
+// и общие правила по категориям (куда ставить предмет в AR и какие подсказки показывать).
 
-export const CATALOG = [
-  {
-    id: 'chair',
-    name: 'Кресло',
-    subtitle: 'Мягкое кресло с резной рамой',
-    description: 'Глубокая посадка, широкие подлокотники, рама из тёмного дерева. Обивка — плотная мебельная ткань.',
-    size: { w: 85, d: 77, h: 107 },
-    placement: 'floor',
-    placeHint: 'Наведите камеру на пол и медленно поводите телефоном: появится кольцо. Коснитесь экрана — кресло встанет в реальном размере.',
-    arModes: AR_MODES,
-    optionLabel: 'Обивка',
-    variants: [
-      { id: 'linen-grey', name: 'Светло-серый лён', swatch: '#bdb7ac' },
-      { id: 'graphite', name: 'Графит', swatch: '#4a4c50' },
-      { id: 'mustard', name: 'Горчичный', swatch: '#b8892a' },
-      { id: 'emerald', name: 'Изумруд', swatch: '#2f6b55' },
-    ],
+export const CATEGORIES = {
+  floor: {
+    label: 'На пол',
+    arPlacement: 'floor',
+    surface: 'полом',
+    placed: 'Стоит на полу',
+    hint: 'Наведите камеру на пол и медленно поводите телефоном: появится кольцо. Коснитесь экрана — предмет встанет в реальном размере.',
   },
-  {
-    id: 'coffee-table',
-    name: 'Журнальный стол',
-    subtitle: 'Круглая каменная столешница',
-    description: 'Столешница из камня на гнутых металлических ножках. Подходит к дивану и паре кресел.',
-    size: { w: 130, d: 130, h: 49 },
-    placement: 'floor',
-    placeHint: 'Наведите камеру на пол и медленно поводите телефоном: появится кольцо. Коснитесь экрана — стол встанет в реальном размере.',
-    arModes: AR_MODES,
-    optionLabel: 'Отделка',
-    variants: [
-      { id: 'white-stone', name: 'Белый камень', swatch: '#e6e4df' },
-      { id: 'grey-stone', name: 'Серый камень', swatch: '#9c9a96' },
-      { id: 'graphite', name: 'Графит', swatch: '#3b3c3f' },
-      { id: 'white-brass', name: 'Белый камень, латунь', swatch: 'linear-gradient(135deg,#e6e4df 50%,#b8893b 50%)' },
-    ],
+  table: {
+    label: 'На стол',
+    // У model-viewer «floor» = любая горизонтальная поверхность, в том числе столешница.
+    arPlacement: 'floor',
+    surface: 'столом',
+    placed: 'Стоит на столе',
+    hint: 'Наведите камеру на стол и медленно поводите телефоном: на столешнице появится кольцо. Коснитесь экрана — предмет встанет на стол.',
   },
-  {
-    id: 'floor-lamp',
-    name: 'Торшер',
-    subtitle: 'Абажур-барабан на тонкой стойке',
-    description: 'Стальная стойка и тяжёлое основание, тканевый абажур с мягким рассеянным светом.',
-    size: { w: 45, d: 45, h: 160 },
-    placement: 'floor',
-    placeHint: 'Наведите камеру на пол и медленно поводите телефоном: появится кольцо. Коснитесь экрана — торшер встанет в реальном размере.',
-    arModes: AR_MODES,
-    optionLabel: 'Абажур',
-    variants: [
-      { id: 'white-linen', name: 'Белый лён', swatch: '#e4dccd' },
-      { id: 'sand', name: 'Песочный', swatch: '#cdb48d' },
-      { id: 'sage', name: 'Шалфей', swatch: '#97a58e' },
-      { id: 'black', name: 'Чёрный', swatch: '#2b2b2d' },
-    ],
+  wall: {
+    label: 'На стену',
+    arPlacement: 'wall',
+    surface: 'стеной',
+    placed: 'Висит на стене',
+    hint: 'Наведите камеру на стену (лучше с рисунком или предметами рядом) и медленно поводите телефоном: появится кольцо. Коснитесь экрана — предмет повиснет на стене.',
   },
-  {
-    id: 'table-lamp',
-    name: 'Настольная лампа',
-    subtitle: 'Керамическое основание, тканевый абажур',
-    description: 'Компактная лампа для тумбы или рабочего стола. Основание из глазурованной керамики, латунный патрон.',
-    size: { w: 28, d: 28, h: 45 },
-    placement: 'table',
-    placeHint: 'Наведите камеру на стол и медленно поводите телефоном: на столешнице появится кольцо. Коснитесь экрана — лампа встанет на стол.',
-    arModes: AR_MODES,
-    optionLabel: 'Основание',
-    variants: [
-      { id: 'white', name: 'Белая керамика', swatch: '#efece5' },
-      { id: 'terracotta', name: 'Терракота', swatch: '#b8613f' },
-      { id: 'sage', name: 'Шалфей', swatch: '#93a38d' },
-      { id: 'black', name: 'Чёрная', swatch: '#232326' },
-    ],
-  },
-];
+};
 
-export const modelUrl = (item, variant) => `models/${item.id}/${variant.id}.glb`;
-export const posterUrl = (item) => `posters/${item.id}.webp`;
+// Android: основной режим — собственный WebXR (js/xr-ar.js). Эти ar-modes model-viewer использует,
+// только если свой WebXR недоступен или не открылся: его WebXR, затем Scene Viewer. iPhone: Quick Look.
+export const AR_MODES = 'webxr scene-viewer quick-look';
+
+export async function loadCatalog(url = 'catalog.json') {
+  const res = await fetch(url, { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`catalog.json: HTTP ${res.status}`);
+  const data = await res.json();
+  const items = (data.items ?? []).filter((it) => {
+    const ok = it.id && it.name && Array.isArray(it.variants) && it.variants.length && it.variants.every((v) => v.id && v.model);
+    if (!ok) console.warn('Пропущен товар с неполными данными:', it);
+    return ok;
+  }).map((it) => ({
+    ...it,
+    category: CATEGORIES[it.category] ? it.category : 'floor',
+    option_label: it.option_label || 'Вариант',
+    size_cm: it.size_cm ?? { w: 0, d: 0, h: 0 },
+  }));
+  return { currency: data.currency || 'RUB', items };
+}
+
+export const modelUrl = (item, variant) => variant.model;
+export const posterUrl = (item) => item.poster || '';
+
+export function formatPrice(value, currency = 'RUB') {
+  if (value == null || value === '') return '';
+  try {
+    return new Intl.NumberFormat('ru-RU', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+  } catch {
+    return `${value} ${currency}`;
+  }
+}

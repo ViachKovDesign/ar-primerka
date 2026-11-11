@@ -24,6 +24,15 @@ CC0 не требует указывать авторство, но мы ука�
 Собственный WebXR-режим (`js/xr-ar.js`) основан на официальном примере three.js
 [webxr_ar_hittest](https://github.com/mrdoob/three.js/blob/r183/examples/webxr_ar_hittest.html) (MIT).
 
+## Библиотеки админки (`vendor/admin-libs.js`, собраны esbuild из npm-пакетов)
+
+| Библиотека | Версия | Автор | Лицензия | Источник |
+|---|---|---|---|---|
+| glTF-Transform (core, extensions, functions) | 4.5.1 | Don McCurdy | MIT | https://github.com/donmccurdy/glTF-Transform |
+| glTF-Validator | 2.0.0-dev.3.10 | Khronos Group | Apache-2.0 | https://github.com/KhronosGroup/glTF-Validator |
+| meshoptimizer (упрощение сетки, распаковка meshopt) | 1.3.0 | Arseny Kapoulkine | MIT | https://github.com/zeux/meshoptimizer |
+| fflate (ZIP) | 0.8.3 | Arjun Barrett | MIT | https://github.com/101arrowz/fflate |
+
 ## Инструменты сборки (только `npm run build`, на сайт не попадают)
 
 | Инструмент | Версия | Лицензия | Источник |
@@ -32,3 +41,4 @@ CC0 не требует указывать авторство, но мы ука�
 | glTF-Transform | 4.5.1 | MIT | https://github.com/donmccurdy/glTF-Transform |
 | sharp | 0.35 | Apache-2.0 | https://github.com/lovell/sharp |
 | gltf-validator (Khronos) | 2.0.0-dev.3.10 | Apache-2.0 | https://github.com/KhronosGroup/glTF-Validator |
+| esbuild-wasm | 0.28.2 | MIT | https://github.com/evanw/esbuild |
