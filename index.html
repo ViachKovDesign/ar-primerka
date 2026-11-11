@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#faf8f4">
+  <title>Примерка мебели в AR</title>
+  <meta name="description" content="Посмотрите кресло, стол и светильники у себя в комнате в реальном размере.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2322201d'/%3E%3Cpath d='M9 21v-6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6M7 21h18M10 21v3M22 21v3' stroke='%23faf8f4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="vendor/model-viewer.min.js"></script>
+  <script src="vendor/qrcode.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" data-nav="catalog">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M9 21v-6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6M7 21h18M10 21v3M22 21v3" stroke="#faf8f4" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <span>Примерка</span>
+    </a>
+    <span class="topbar-note">мебель в вашей комнате</span>
+  </header>
+
+  <main id="app">
+    <!-- Каталог -->
+    <section id="catalog-view" class="view" aria-labelledby="catalog-title">
+      <div class="intro">
+        <h1 id="catalog-title">Посмотрите мебель у себя дома</h1>
+        <p>Выберите предмет и цвет, затем нажмите «Посмотреть в комнате»: камера телефона покажет его в реальном размере.</p>
+      </div>
+      <ul class="grid" id="catalog-grid"></ul>
+    </section>
+
+    <!-- Карточка предмета -->
+    <section id="product-view" class="view" hidden aria-labelledby="product-title">
+      <a class="back" href="./" data-nav="catalog">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Каталог
+      </a>
+
+      <div class="product">
+        <div class="stage">
+          <model-viewer id="viewer"
+            camera-controls
+            touch-action="pan-y"
+            shadow-intensity="1"
+            shadow-softness="0.8"
+            exposure="1.05"
+            environment-image="neutral"
+            interaction-prompt="auto"
+            camera-orbit="-25deg 75deg auto"
+            ar
+            ar-scale="fixed"
+            ar-placement="floor"
+            loading="eager">
+            <!-- Своя кнопка AR стоит под моделью; встроенную кнопку model-viewer скрываем. -->
+            <span slot="ar-button" class="visually-hidden"></span>
+            <div slot="progress-bar" class="progress" aria-hidden="true"><div class="progress-fill"></div></div>
+          </model-viewer>
+          <p class="stage-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Вращайте пальцем, приближайте щипком
+          </p>
+        </div>
+
+        <div class="details">
+          <h1 id="product-title"></h1>
+          <p class="subtitle" id="product-subtitle"></p>
+          <p class="dims" id="product-dims"></p>
+
+          <fieldset class="variants">
+            <legend><span id="option-label"></span>: <strong id="variant-name"></strong></legend>
+            <div class="swatches" id="swatches"></div>
+          </fieldset>
+
+          <!-- Телефон с AR -->
+          <div class="ar-block" id="ar-block" hidden>
+            <button type="button" class="btn-ar" id="ar-button">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              Посмотреть в комнате
+            </button>
+            <p class="ar-hint" id="ar-hint"></p>
+          </div>
+
+          <!-- Компьютер -->
+          <div class="qr-block" id="qr-block" hidden>
+            <div class="qr" id="qr" role="img" aria-label="QR-код со ссылкой на эту страницу"></div>
+            <div>
+              <h2>Откройте на телефоне</h2>
+              <p>Наведите камеру телефона на код — откроется этот же предмет и цвет. Там можно поставить его в комнате.</p>
+              <p class="qr-local" id="qr-local" hidden>Сейчас сайт открыт локально: QR заработает после публикации по https.</p>
+            </div>
+          </div>
+
+          <!-- AR недоступен -->
+          <div class="notice" id="notice" role="status" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v5M12 16.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <div>
+              <strong id="notice-title"></strong>
+              <p id="notice-text"></p>
+            </div>
+          </div>
+
+          <p class="description" id="product-description"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <details class="credits">
+      <summary>Прототип · авторы и лицензии</summary>
+      <ul>
+        <li>Кресло — <a href="https://polyhaven.com/a/ArmChair_01" rel="noopener">Arm Chair 01</a>, Kirill Sannikov, Poly Haven, CC0</li>
+        <li>Журнальный стол — <a href="https://polyhaven.com/a/coffee_table_round_01" rel="noopener">Coffee Table Round 01</a>, Ulan Cabanilla, Poly Haven, CC0</li>
+        <li>Торшер и настольная лампа — собраны кодом в этом проекте, CC0</li>
+        <li><a href="https://github.com/google/model-viewer" rel="noopener">&lt;model-viewer&gt;</a> — Google, Apache-2.0</li>
+        <li><a href="https://github.com/kazuhikoarase/qrcode-generator" rel="noopener">qrcode-generator</a> — Kazuhiko Arase, MIT</li>
+      </ul>
+    </details>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Генерация постеров</title>
+  <script type="module" src="../vendor/model-viewer.min.js"></script>
+  <style>
+    body { font: 14px system-ui; margin: 16px; background: #fff; }
+    model-viewer { width: 800px; height: 800px; background: transparent; }
+  </style>
+</head>
+<body>
+  <p>Служебная страница: рендерит первый вариант каждого предмета и сохраняет постер в posters/ через dev-server.</p>
+  <pre id="log"></pre>
+  <model-viewer id="mv" shadow-intensity="1" shadow-softness="0.8" exposure="1.05" environment-image="neutral"
+    camera-orbit="-30deg 75deg auto" interaction-prompt="none"></model-viewer>
+  <script type="module">
+    import { CATALOG, modelUrl } from '../js/catalog.js';
+    const mv = document.getElementById('mv');
+    const log = (s) => (document.getElementById('log').textContent += s + '\n');
+    await customElements.whenDefined('model-viewer');
+    // ?all=1 — дополнительно рендерит превью всех вариантов (preview-<предмет>-<вариант>.webp) для проверки цвета.
+    const all = new URLSearchParams(location.search).has('all');
+    for (const item of CATALOG) {
+      for (const [i, v] of item.variants.entries()) {
+        if (i > 0 && !all) break;
+        await new Promise((ok) => { mv.addEventListener('load', ok, { once: true }); mv.src = '../' + modelUrl(item, v); });
+        await new Promise((ok) => setTimeout(ok, 800));
+        const data = mv.toDataURL('image/png');
+        const names = all ? [`preview-${item.id}-${v.id}`] : [];
+        if (i === 0) names.push(item.id);
+        for (const name of names) {
+          const r = await fetch(`/__poster?name=${name}`, { method: 'POST', body: data });
+          log(`${name}: ${r.status}`);
+        }
+      }
+    }
+    log('done');
+    document.title = 'done';
+  </script>
+</body>
+</html>
