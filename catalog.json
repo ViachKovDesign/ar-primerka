@@ -201,7 +201,7 @@
     },
     {
       "id": "divan-izognutyy",
-      "name": "диван изогнутый",
+      "name": "Диван изогнутый",
       "price": null,
       "category": "floor",
       "size_cm": {
@@ -209,41 +209,41 @@
         "d": 102,
         "h": 79
       },
-      "option_label": "Цвет",
+      "option_label": "Обивка",
       "poster": "posters/divan-izognutyy.webp",
       "bg": "light",
       "variants": [
         {
           "id": "champagne",
-          "name": "Champagne",
+          "name": "Шампань",
           "swatch": "#4d4538",
           "bg": "light",
           "model": "models/divan-izognutyy/champagne.glb"
         },
         {
           "id": "navy",
-          "name": "Navy",
+          "name": "Тёмно-синий",
           "swatch": "#1f2d4f",
           "bg": "light",
           "model": "models/divan-izognutyy/navy.glb"
         },
         {
           "id": "gray",
-          "name": "Gray",
+          "name": "Серый",
           "swatch": "#898982",
           "bg": "dark",
           "model": "models/divan-izognutyy/gray.glb"
         },
         {
           "id": "black",
-          "name": "Black",
+          "name": "Чёрный",
           "swatch": "#191919",
           "bg": "light",
           "model": "models/divan-izognutyy/black.glb"
         },
         {
           "id": "pale-pink",
-          "name": "Pale Pink",
+          "name": "Бледно-розовый",
           "swatch": "#e2c0c2",
           "bg": "dark",
           "model": "models/divan-izognutyy/pale-pink.glb"

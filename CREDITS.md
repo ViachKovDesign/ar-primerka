@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | Arm Chair 01 (кресло) | Kirill Sannikov, [Poly Haven](https://polyhaven.com) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://polyhaven.com/a/ArmChair_01 | Текстуры 1k, упаковка в GLB, ткань перекрашена в 4 варианта, точка опоры перенесена в центр низа |
 | Coffee Table Round 01 (журнальный стол) | Ulan Cabanilla, [Poly Haven](https://polyhaven.com) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://polyhaven.com/a/coffee_table_round_01 | Текстуры 1k, упаковка в GLB, столешница перекрашена и сделана матовой, вариант с латунными ножками |
-| Glam Velvet Sofa (диван изогнутый) | © Wayfair LLC, из [Khronos glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — **указание автора обязательно** | https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/GlamVelvetSofa | Обработан админкой: варианты обивки нарезаны на 5 отдельных GLB, текстуры перекодированы, точка опоры в центре низа |
+| Glam Velvet Sofa (Диван изогнутый) | © Wayfair LLC, из [Khronos glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — **указание автора обязательно** | https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/GlamVelvetSofa | Обработан админкой: варианты обивки нарезаны на 5 отдельных GLB, текстуры перекодированы, точка опоры в центре низа |
 | Торшер, настольная лампа | этот проект (собраны кодом из примитивов, `scripts/make-lamps.mjs`) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | — | — |
 
 CC0 не требует указывать авторство, но мы указываем его из уважения к авторам.
