@@ -26,13 +26,31 @@ function shadeShell(rBottom, rTop, y0, y1, t = 0.003) {
   ]);
 }
 
-function addMesh(doc, scene, buffer, name, geometry, material) {
-  geometry.computeVertexNormals();
-  const g = geometry.index ? geometry : geometry; // LatheGeometry уже индексирована
+/**
+ * Нормали берём те, что строят сами LatheGeometry/SphereGeometry.
+ * Пересчёт computeVertexNormals() давал нулевые нормали в точках на оси вращения
+ * (вырожденные треугольники) — glTF-валидатор считает это ошибкой (ACCESSOR_VECTOR3_NON_UNIT),
+ * а Scene Viewer не открывает модели с ошибками валидации.
+ * Здесь же страхуемся: любая нулевая нормаль заменяется на вертикальную, все нормируются.
+ */
+function safeNormals(g) {
+  const pos = g.attributes.position.array;
+  const n = new Float32Array(g.attributes.normal.array);
+  g.computeBoundingBox();
+  const midY = (g.boundingBox.min.y + g.boundingBox.max.y) / 2;
+  for (let i = 0; i < n.length; i += 3) {
+    let len = Math.hypot(n[i], n[i + 1], n[i + 2]);
+    if (!(len > 1e-6)) { n[i] = 0; n[i + 1] = pos[i + 1] >= midY ? 1 : -1; n[i + 2] = 0; len = 1; }
+    n[i] /= len; n[i + 1] /= len; n[i + 2] /= len;
+  }
+  return n;
+}
+
+function addMesh(doc, scene, buffer, name, g, material) {
   const acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buffer);
   const prim = doc.createPrimitive()
     .setAttribute('POSITION', acc('VEC3', new Float32Array(g.attributes.position.array)))
-    .setAttribute('NORMAL', acc('VEC3', new Float32Array(g.attributes.normal.array)))
+    .setAttribute('NORMAL', acc('VEC3', safeNormals(g)))
     .setAttribute('TEXCOORD_0', acc('VEC2', new Float32Array(g.attributes.uv.array)))
     .setIndices(acc('SCALAR', new Uint16Array(g.index.array)))
     .setMaterial(material);

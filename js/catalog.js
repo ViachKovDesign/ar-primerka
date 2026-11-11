@@ -1,5 +1,10 @@
 // Каталог: предметы, реальные размеры, варианты и файлы моделей.
 // Каждый вариант — отдельный GLB с «запечённым» цветом, чтобы цвет сохранялся во всех AR-режимах.
+// Android: первым Scene Viewer — у него своя надёжная постановка на поверхность (сетка, тень,
+// фиксированный масштаб 1:1 через resizable=false). Если Scene Viewer недоступен,
+// model-viewer при повторном нажатии откроет WebXR прямо в браузере. iPhone: Quick Look.
+const AR_MODES = 'scene-viewer webxr quick-look';
+
 export const CATALOG = [
   {
     id: 'chair',
@@ -8,8 +13,8 @@ export const CATALOG = [
     description: 'Глубокая посадка, широкие подлокотники, рама из тёмного дерева. Обивка — плотная мебельная ткань.',
     size: { w: 85, d: 77, h: 107 },
     placement: 'floor',
-    placeHint: 'Наведите камеру на пол — кресло встанет в реальном размере.',
-    arModes: 'webxr scene-viewer quick-look',
+    placeHint: 'Наведите камеру на пол и медленно поводите телефоном, пока не появится сетка, — кресло встанет в реальном размере.',
+    arModes: AR_MODES,
     optionLabel: 'Обивка',
     variants: [
       { id: 'linen-grey', name: 'Светло-серый лён', swatch: '#bdb7ac' },
@@ -25,8 +30,8 @@ export const CATALOG = [
     description: 'Столешница из камня на гнутых металлических ножках. Подходит к дивану и паре кресел.',
     size: { w: 130, d: 130, h: 49 },
     placement: 'floor',
-    placeHint: 'Наведите камеру на пол — стол встанет в реальном размере.',
-    arModes: 'webxr scene-viewer quick-look',
+    placeHint: 'Наведите камеру на пол и медленно поводите телефоном, пока не появится сетка, — стол встанет в реальном размере.',
+    arModes: AR_MODES,
     optionLabel: 'Отделка',
     variants: [
       { id: 'white-stone', name: 'Белый камень', swatch: '#e6e4df' },
@@ -42,8 +47,8 @@ export const CATALOG = [
     description: 'Стальная стойка и тяжёлое основание, тканевый абажур с мягким рассеянным светом.',
     size: { w: 45, d: 45, h: 160 },
     placement: 'floor',
-    placeHint: 'Наведите камеру на пол — торшер встанет в реальном размере.',
-    arModes: 'webxr scene-viewer quick-look',
+    placeHint: 'Наведите камеру на пол и медленно поводите телефоном, пока не появится сетка, — торшер встанет в реальном размере.',
+    arModes: AR_MODES,
     optionLabel: 'Абажур',
     variants: [
       { id: 'white-linen', name: 'Белый лён', swatch: '#e4dccd' },
@@ -59,9 +64,8 @@ export const CATALOG = [
     description: 'Компактная лампа для тумбы или рабочего стола. Основание из глазурованной керамики, латунный патрон.',
     size: { w: 28, d: 28, h: 45 },
     placement: 'table',
-    placeHint: 'Наведите камеру на стол и подождите, пока поверхность распознается, — лампа встанет на столешницу.',
-    // На Android первым идёт Scene Viewer: он надёжнее находит поверхности выше пола.
-    arModes: 'scene-viewer webxr quick-look',
+    placeHint: 'Наведите камеру на стол и медленно поводите телефоном, пока на столешнице не появится сетка, — лампа встанет на неё.',
+    arModes: AR_MODES,
     optionLabel: 'Основание',
     variants: [
       { id: 'white', name: 'Белая керамика', swatch: '#efece5' },

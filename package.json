@@ -6,7 +6,8 @@
   "description": "Прототип AR-примерки мебели на Google model-viewer",
   "scripts": {
     "fetch": "node scripts/fetch-sources.mjs",
-    "models": "node scripts/build-models.mjs && node scripts/make-lamps.mjs && node scripts/check-sizes.mjs",
+    "models": "node scripts/build-models.mjs && node scripts/make-lamps.mjs && node scripts/check-sizes.mjs && node scripts/validate-models.mjs",
+    "validate": "node scripts/validate-models.mjs",
     "vendor": "node scripts/copy-vendor.mjs",
     "build": "npm run vendor && npm run models",
     "serve": "node scripts/dev-server.mjs"
@@ -16,6 +17,7 @@
     "@gltf-transform/extensions": "^4.5.1",
     "@gltf-transform/functions": "^4.5.1",
     "@google/model-viewer": "^4.4.0",
+    "gltf-validator": "^2.0.0-dev.3.10",
     "qrcode-generator": "^2.0.4",
     "sharp": "^0.35.5",
     "three": "^0.183.2"

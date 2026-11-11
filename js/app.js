@@ -46,6 +46,12 @@ function showProduct(item, variant) {
   $('option-label').textContent = item.optionLabel;
   viewer.setAttribute('ar-modes', item.arModes);
   viewer.setAttribute('ar-placement', 'floor'); // floor = любая горизонтальная поверхность, в т.ч. стол
+  // Жёсткий масштаб 1:1 во всех режимах: WebXR — без щипка, Scene Viewer — resizable=false,
+  // Quick Look — #allowsContentScaling=0 (всё это model-viewer делает по ar-scale="fixed").
+  viewer.setAttribute('ar-scale', 'fixed');
+  const surface = item.placement === 'table' ? 'столом' : 'полом';
+  $('ar-prompt-text').textContent = `Поводите телефоном над ${surface}`;
+  $('ar-placed-text').textContent = `Стоит на ${item.placement === 'table' ? 'столе' : 'полу'} · перетащите, чтобы сдвинуть`;
   viewer.alt = `${item.name}: 3D-модель, ${dims(item)}`;
 
   $('swatches').innerHTML = item.variants.map((v) => `
@@ -115,10 +121,23 @@ async function updateArUi() {
   } else if (isMobile && !canAR) {
     showNotice('AR недоступен на этом устройстве', unsupportedText() + ' 3D-просмотр выше работает как обычно.');
   }
-  if (state.arFailed) {
+  if (state.sceneViewerFailed) {
+    showNotice('Приложение Google для AR не открылось',
+      'Нажмите «Посмотреть в комнате» ещё раз — AR откроется прямо в браузере. Чтобы работал основной режим, обновите приложение Google и «Сервисы Google Play для AR».');
+  } else if (state.arFailed) {
     showNotice('Не получилось запустить AR', failedText());
   }
 }
+
+// Scene Viewer при ошибке возвращает на страницу с хешем #model-viewer-no-ar-fallback.
+// model-viewer сам убирает хеш и при следующем нажатии использует WebXR — сообщаем об этом.
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#model-viewer-no-ar-fallback') {
+    state.sceneViewerFailed = true;
+    console.warn('[AR] Scene Viewer не открылся, следующий запуск — WebXR');
+    updateArUi();
+  }
+});
 
 function unsupportedText() {
   if (isIOS) return 'Нужен iPhone или iPad с iOS 12 или новее, страница должна быть открыта в Safari.';
@@ -133,6 +152,7 @@ function failedText() {
 $('ar-button').addEventListener('click', () => {
   // activateAR() должен вызываться синхронно из обработчика нажатия.
   state.arFailed = false;
+  state.sceneViewerFailed = false;
   viewer.activateAR();
 });
 
@@ -168,7 +188,7 @@ function route() {
   const params = new URLSearchParams(location.search);
   const item = CATALOG.find((x) => x.id === params.get('item'));
   // Scene Viewer при неудаче возвращает на страницу с этим хешем.
-  if (location.hash === '#model-viewer-no-ar-fallback') state.arFailed = true;
+  if (location.hash === '#model-viewer-no-ar-fallback') state.sceneViewerFailed = true;
 
   $('catalog-view').hidden = Boolean(item);
   $('product-view').hidden = !item;

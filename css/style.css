@@ -158,6 +158,38 @@ model-viewer {
   * { transition: none !important; }
 }
 
+/* ---------- Подсказки внутри WebXR ---------- */
+.ar-prompt, .ar-chip { display: none; position: absolute; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: none; }
+.ar-prompt {
+  bottom: max(96px, calc(env(safe-area-inset-bottom) + 96px));
+  flex-direction: column; align-items: center; gap: 10px;
+  padding: 16px 20px; border-radius: 18px; width: max-content; max-width: calc(100% - 32px);
+  background: rgba(20, 19, 17, .72); color: #fff; font-weight: 600; font-size: 17px; text-align: center;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.ar-prompt-phone { animation: ar-sweep 2.2s ease-in-out infinite; }
+@keyframes ar-sweep {
+  0%, 100% { transform: translateX(-22px) rotate(-8deg); }
+  50% { transform: translateX(22px) rotate(8deg); }
+}
+.ar-chip {
+  top: max(20px, calc(env(safe-area-inset-top) + 12px));
+  align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
+  width: max-content; max-width: calc(100% - 96px);
+  background: rgba(20, 19, 17, .72); color: #fff; font-size: 15px; font-weight: 600;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.ar-dot { width: 10px; height: 10px; border-radius: 50%; background: #4cd964; flex: none; }
+.ar-chip-lost { background: rgba(160, 60, 30, .85); }
+
+/* Пока предмет не поставлен — крупная подсказка. После постановки — зелёный статус, гаснет через 5 с. */
+model-viewer[ar-status="session-started"] .ar-prompt { display: flex; }
+model-viewer[ar-status="object-placed"]:not([ar-tracking="not-tracking"]) .ar-chip-placed { display: flex; animation: ar-fade 5s forwards; }
+model-viewer[ar-status="object-placed"][ar-tracking="not-tracking"] .ar-chip-lost,
+model-viewer[ar-status="session-started"][ar-tracking="not-tracking"] .ar-chip-lost { display: flex; }
+@keyframes ar-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ar-prompt-phone { animation: none; } }
+
 /* ---------- Подвал: авторы ---------- */
 .credits summary { cursor: pointer; display: inline-block; padding: 8px 4px; }
 .credits ul { list-style: none; padding: 0; margin: 8px auto 0; max-width: 40em; display: grid; gap: 4px; }
