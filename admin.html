@@ -194,12 +194,14 @@
         <div class="howto" id="howto" hidden>
           <h3>Как опубликовать</h3>
           <ol>
-            <li>Распакуйте скачанный архив — внутри <code>catalog.json</code>, папки <code>models/</code> и <code>posters/</code>.</li>
+            <li>Распакуйте скачанный архив. Внутри — папка <code>na-sait</code> (в ней <code>catalog.json</code>, <code>models/</code>, <code>posters/</code>) и файл с инструкцией.</li>
+            <li>Откройте папку <code>na-sait</code> и выделите в ней всё (Ctrl+A).</li>
             <li>Откройте репозиторий на GitHub → <strong>Add file → Upload files</strong>.</li>
-            <li>Перетащите в окно <strong>всё содержимое</strong> распакованной папки (файл и обе папки). <code>catalog.json</code> заменится, новые модели добавятся.</li>
+            <li><strong>Перетащите выделенное мышкой</strong> в окно GitHub. В списке должны быть пути с папками: <code>models/…/….glb</code>, <code>posters/….webp</code>. <code>catalog.json</code> заменится, новые модели добавятся.</li>
             <li>Внизу нажмите <strong>Commit changes</strong>. Через 1–2 минуты товар появится на сайте.</li>
           </ol>
-          <p class="note">Если работаете через git: распакуйте архив в папку проекта, затем <code>git add .</code>, <code>git commit</code>, <code>git push</code>.</p>
+          <p class="howto-warn"><strong>Не выбирайте файлы через окно «choose your files»</strong> — GitHub потеряет папки, модели окажутся в корне и сайт их не найдёт. Сам ZIP и файл инструкции на сайт не загружайте.</p>
+          <p class="note">Если работаете через git: скопируйте содержимое папки <code>na-sait</code> в папку проекта, затем <code>git add .</code>, <code>git commit</code>, <code>git push</code>.</p>
         </div>
       </section>
     </div>

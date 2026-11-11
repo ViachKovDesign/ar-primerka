@@ -1030,12 +1030,14 @@ $('export-zip').addEventListener('click', async () => {
       source: { files: S.sources.map((s) => s.name), added: new Date().toISOString().slice(0, 10) },
     };
     const catalog = catalogForExport(item);
+    // Всё, что идёт на сайт, — в одной папке-обёртке SITE_DIR. Инструкция лежит рядом с ней, а не внутри,
+    // чтобы её не загрузили на сайт. Так при загрузке через GitHub папки models/ и posters/ не теряются.
     const files = {
-      'catalog.json': L.strToU8(JSON.stringify(catalog, null, 2) + '\n'),
-      [`posters/${id}.webp`]: poster,
+      [`${SITE_DIR}/catalog.json`]: L.strToU8(JSON.stringify(catalog, null, 2) + '\n'),
+      [`${SITE_DIR}/posters/${id}.webp`]: poster,
       'КАК-ОПУБЛИКОВАТЬ.txt': L.strToU8(howtoText(item)),
     };
-    S.built.forEach((b, i) => { files[`models/${id}/${slug(S.rows[i].id)}.glb`] = [b.bytes, { level: 0 }]; });
+    S.built.forEach((b, i) => { files[`${SITE_DIR}/models/${id}/${slug(S.rows[i].id)}.glb`] = [b.bytes, { level: 0 }]; });
     const zip = L.zipSync(files, { level: 6 });
     download(new Blob([zip], { type: 'application/zip' }), `ar-catalog-${id}.zip`);
 
@@ -1075,23 +1077,35 @@ async function makePoster() {
   return new Uint8Array(await out.arrayBuffer());
 }
 
+const SITE_DIR = 'na-sait'; // латиницей: имя папки в ZIP читается одинаково в любой системе
+
 function howtoText(item) {
   return [
     `Товар: ${item.name} (${item.id}), вариантов: ${item.variants.length}`,
     `Собрано: ${new Date().toLocaleString('ru-RU')}`,
     '',
-    'Содержимое архива:',
+    '=====================================================================',
+    `  ПЕРЕТАЩИТЕ ВСЁ СОДЕРЖИМОЕ ПАПКИ «${SITE_DIR}» В GITHUB МЫШКОЙ.`,
+    '  НЕ ВЫБИРАЙТЕ ФАЙЛЫ ЧЕРЕЗ ОКНО «choose your files» —',
+    '  ИНАЧЕ GITHUB ПОТЕРЯЕТ ПАПКИ И САЙТ НЕ НАЙДЁТ МОДЕЛИ.',
+    '=====================================================================',
+    '',
+    `Что в папке «${SITE_DIR}» (только это идёт на сайт):`,
     '  catalog.json            — весь каталог (заменяет текущий)',
     `  models/${item.id}/      — модели по вариантам`,
     `  posters/${item.id}.webp — картинка для каталога`,
+    'Этот файл с инструкцией и сам ZIP на сайт НЕ загружайте.',
     '',
     'Как опубликовать на GitHub Pages (без git):',
     '  1. Распакуйте архив.',
-    '  2. GitHub → репозиторий → Add file → Upload files.',
-    '  3. Перетащите в окно ВСЁ содержимое распакованной папки (catalog.json, models, posters).',
-    '  4. Commit changes. Через 1–2 минуты товар появится на сайте.',
+    `  2. Откройте папку «${SITE_DIR}» и выделите в ней всё (Ctrl+A): catalog.json, models, posters.`,
+    '  3. GitHub → репозиторий → Add file → Upload files.',
+    '  4. ПЕРЕТАЩИТЕ выделенное мышкой в окно GitHub. В списке GitHub должен показать пути с папками:',
+    `     models/${item.id}/….glb и posters/${item.id}.webp.`,
+    '     Если видны просто имена .glb без «models/» — папки потерялись: обновите страницу и перетащите снова.',
+    '  5. Commit changes. Через 1–2 минуты товар появится на сайте.',
     '',
-    'Через git: распакуйте в папку проекта → git add . → git commit → git push.',
+    `Через git: скопируйте содержимое папки «${SITE_DIR}» в папку проекта → git add . → git commit → git push.`,
     '',
   ].join('\r\n');
 }

@@ -62,6 +62,11 @@
             <!-- Своя кнопка AR стоит под моделью; встроенную кнопку model-viewer скрываем. -->
             <span slot="ar-button" class="visually-hidden"></span>
             <div slot="progress-bar" class="progress" aria-hidden="true"><div class="progress-fill"></div></div>
+            <!-- Модель не загрузилась (например, файла нет на сайте) — вместо пустой сцены. -->
+            <div class="model-error" id="model-error" role="alert" hidden>
+              <strong id="model-error-title">Файл модели не найден</strong>
+              <span id="model-error-text"></span>
+            </div>
 
             <!-- Подсказки внутри WebXR-сессии (видны поверх камеры). Показ — по атрибутам
                  ar-status / ar-tracking, которые выставляет model-viewer (см. style.css). -->

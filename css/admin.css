@@ -107,3 +107,4 @@
 .blame .row { gap: 8px; flex-wrap: wrap; }
 .admin-status .btn { margin: 8px 8px 0 0; }
 #export-reason { align-self: center; }
+.howto-warn { margin: 10px 0; padding: 10px 14px; border-radius: 12px; background: #fff4e0; border: 1px solid #f0d29a; color: #6b3d00; font-size: 15px; }

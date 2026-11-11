@@ -164,6 +164,7 @@ function setVariant(variant) {
 
   const src = modelUrl(item, variant);
   if (viewer.src !== src) {
+    hideModelError();
     $('product-view').querySelector('.progress')?.classList.remove('done');
     viewer.src = src;
     viewer.cameraOrbit = '-25deg 75deg auto';
@@ -192,6 +193,7 @@ async function updateArUi() {
   await customElements.whenDefined('model-viewer');
   const canAR = viewer.canActivateAR || xr.supported === true;
   $('notice').hidden = true;
+  if (state.modelError) { $('ar-block').hidden = true; return; } // AR без модели не откроется
 
   if (canAR) {
     $('ar-block').hidden = false;
@@ -273,9 +275,35 @@ viewer.addEventListener('ar-status', (e) => {
 });
 viewer.addEventListener('ar-tracking', (e) => dlog(`model-viewer ar-tracking: ${e.detail.status}`));
 viewer.addEventListener('load', () => {
+  hideModelError();
   $('product-view').querySelector('.progress').classList.add('done');
   updateArUi();
 });
+
+// Модель не загрузилась: говорим об этом, а не показываем пустую сцену. 404 — файла нет на сайте
+// (так бывает, если при загрузке на GitHub потерялись папки models/…).
+viewer.addEventListener('error', async (e) => {
+  if (e.detail?.type !== 'loadfailure') return;
+  const src = viewer.src;
+  let notFound = false;
+  try { notFound = (await fetch(src, { method: 'HEAD', cache: 'no-store' })).status === 404; } catch { /* сеть — ниже общий текст */ }
+  if (viewer.src !== src) return; // уже выбран другой вариант
+  const path = new URL(src, location.href).pathname.split('/').slice(-3).join('/');
+  dlog(`модель не загрузилась: ${src}${notFound ? ' (404)' : ''}`);
+  $('model-error-title').textContent = notFound ? 'Файл модели не найден' : 'Модель не загрузилась';
+  $('model-error-text').textContent = notFound
+    ? `На сайте нет файла ${path}. Сообщите, пожалуйста, магазину.`
+    : 'Проверьте интернет и обновите страницу.';
+  $('model-error').hidden = false;
+  $('product-view').querySelector('.progress').classList.add('done');
+  state.modelError = true;
+  $('ar-block').hidden = true; // AR без модели не откроется
+});
+
+function hideModelError() {
+  state.modelError = false;
+  $('model-error').hidden = true;
+}
 viewer.addEventListener('progress', (e) => {
   const p = e.detail.totalProgress;
   const bar = $('product-view').querySelector('.progress');
