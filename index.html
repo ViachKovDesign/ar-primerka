@@ -9,7 +9,11 @@
   <meta name="description" content="Посмотрите кресло, стол и светильники у себя в комнате в реальном размере.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2322201d'/%3E%3Cpath d='M9 21v-6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6M7 21h18M10 21v3M22 21v3' stroke='%23faf8f4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css">
-  <script type="module" src="vendor/model-viewer.min.js"></script>
+  <!-- Одна копия three.js: её используют и model-viewer (модульная сборка), и собственный WebXR-режим. -->
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/build/three.module.min.js", "three/addons/": "./vendor/three/examples/jsm/" } }
+  </script>
+  <script type="module" src="vendor/model-viewer-module.min.js"></script>
   <script src="vendor/qrcode.js" defer></script>
   <script type="module" src="js/app.js"></script>
 </head>
@@ -129,8 +133,36 @@
         <li>Торшер и настольная лампа — собраны кодом в этом проекте, CC0</li>
         <li><a href="https://github.com/google/model-viewer" rel="noopener">&lt;model-viewer&gt;</a> — Google, Apache-2.0</li>
         <li><a href="https://github.com/kazuhikoarase/qrcode-generator" rel="noopener">qrcode-generator</a> — Kazuhiko Arase, MIT</li>
+        <li><a href="https://github.com/mrdoob/three.js" rel="noopener">three.js</a> — three.js authors, MIT (AR-режим на основе примера webxr_ar_hittest)</li>
       </ul>
     </details>
   </footer>
+
+  <!-- Оверлей собственного WebXR-режима: браузер показывает его поверх камеры (DOM Overlay). -->
+  <div id="xr-overlay" class="xr-overlay" hidden data-state="loading">
+    <div class="xr-drag" aria-hidden="true"></div>
+    <div class="xr-top">
+      <pre id="xr-debug" class="xr-debug" hidden></pre>
+      <button type="button" id="xr-close" class="xr-btn xr-close" aria-label="Закрыть AR">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="xr-center" role="status" aria-live="polite">
+      <div class="xr-msg" data-for="loading"><span class="xr-spinner"></span>Загружаем модель…</div>
+      <div class="xr-msg xr-msg-big" data-for="searching">
+        <svg class="ar-prompt-phone" viewBox="0 0 48 48" width="56" height="56" aria-hidden="true"><rect x="15" y="6" width="18" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M6 42h36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="3 4"/></svg>
+        <span class="xr-search-text">Поводите телефоном над полом</span>
+      </div>
+      <div class="xr-msg xr-msg-warn" data-for="lost">Поверхность потеряна — медленно поводите телефоном</div>
+      <div class="xr-msg" data-for="ready"><span>Кольцо — где встанет предмет.<br><strong>Коснитесь экрана, чтобы поставить</strong></span></div>
+    </div>
+    <div class="xr-bottom">
+      <div class="xr-msg xr-msg-ok" data-for="placed"><span class="ar-dot"></span><span><span class="xr-placed-text">Стоит на полу</span> · проведите пальцем, чтобы повернуть</span></div>
+      <button type="button" id="xr-reset" class="xr-btn xr-reset" data-for="placed">Переставить</button>
+    </div>
+  </div>
+
+  <!-- Отладка (?debug=1) -->
+  <pre id="debug-panel" class="debug-panel" hidden></pre>
 </body>
 </html>

@@ -3,9 +3,24 @@
 import { copyFile, mkdir, writeFile, readFile } from 'node:fs/promises';
 
 await mkdir('vendor', { recursive: true });
-await copyFile('node_modules/@google/model-viewer/dist/model-viewer.min.js', 'vendor/model-viewer.min.js');
+// Модульная сборка без встроенного three.js: three берётся из import map (vendor/three) —
+// одна копия three.js и для model-viewer, и для собственного WebXR-режима.
+await copyFile('node_modules/@google/model-viewer/dist/model-viewer-module.min.js', 'vendor/model-viewer-module.min.js');
 await copyFile('node_modules/@google/model-viewer/LICENSE', 'vendor/LICENSE-model-viewer.txt');
 await copyFile('node_modules/qrcode-generator/dist/qrcode.js', 'vendor/qrcode.js');
+
+// three.js — для собственного WebXR-режима (кольцо-указатель + постановка по касанию).
+// Структура папок как в пакете, чтобы относительные импорты внутри примеров работали.
+const T = 'node_modules/three';
+for (const f of [
+  'build/three.module.min.js', 'build/three.core.min.js',
+  'examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/utils/BufferGeometryUtils.js',
+  'examples/jsm/utils/SkeletonUtils.js', 'examples/jsm/environments/RoomEnvironment.js',
+]) {
+  await mkdir(`vendor/three/${f.split('/').slice(0, -1).join('/')}`, { recursive: true });
+  await copyFile(`${T}/${f}`, `vendor/three/${f}`);
+}
+await copyFile(`${T}/LICENSE`, 'vendor/LICENSE-three.txt');
 // В пакете qrcode-generator нет отдельного файла LICENSE — лицензия MIT указана в шапке qrcode.js
 // и в package.json; сохраняем её текст рядом.
 const pkg = JSON.parse(await readFile('node_modules/qrcode-generator/package.json', 'utf8'));

@@ -18,8 +18,11 @@ CC0 не требует указывать авторство, но мы ука�
 |---|---|---|---|---|
 | `<model-viewer>` | 4.4.0 | Google | Apache-2.0 (`vendor/LICENSE-model-viewer.txt`) | https://github.com/google/model-viewer |
 | qrcode-generator | 2.0.4 | Kazuhiko Arase | MIT (`vendor/LICENSE-qrcode-generator.txt`) | https://github.com/kazuhikoarase/qrcode-generator |
+| three.js (+ GLTFLoader, RoomEnvironment) | 0.183.2 | three.js authors | MIT (`vendor/LICENSE-three.txt`) | https://github.com/mrdoob/three.js |
 
-`model-viewer.min.js` включает в себя three.js (MIT, https://github.com/mrdoob/three.js).
+`<model-viewer>` подключён модульной сборкой (`model-viewer-module.min.js`), которая использует ту же копию three.js.
+Собственный WebXR-режим (`js/xr-ar.js`) основан на официальном примере three.js
+[webxr_ar_hittest](https://github.com/mrdoob/three.js/blob/r183/examples/webxr_ar_hittest.html) (MIT).
 
 ## Инструменты сборки (только `npm run build`, на сайт не попадают)
 
@@ -28,3 +31,4 @@ CC0 не требует указывать авторство, но мы ука�
 | three.js | 0.183 | MIT | https://github.com/mrdoob/three.js |
 | glTF-Transform | 4.5.1 | MIT | https://github.com/donmccurdy/glTF-Transform |
 | sharp | 0.35 | Apache-2.0 | https://github.com/lovell/sharp |
+| gltf-validator (Khronos) | 2.0.0-dev.3.10 | Apache-2.0 | https://github.com/KhronosGroup/glTF-Validator |

@@ -13,7 +13,68 @@ const isMobile = Boolean(navigator.userAgentData?.mobile) || isIOS || isAndroid
 const isInApp = /FBAN|FBAV|Instagram|Telegram|VKClient|OKApp|Line\/|MicroMessenger|; wv\)/i.test(ua);
 const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) || location.protocol === 'file:';
 
-const state = { item: null, variant: null, arFailed: false };
+const state = { item: null, variant: null, arFailed: false, sceneViewerFailed: false, lastPath: '—' };
+
+// ---------- Отладка (?debug=1) ----------
+const DEBUG = new URLSearchParams(location.search).has('debug');
+const logLines = [];
+function dlog(msg) {
+  const t = new Date().toTimeString().slice(0, 8);
+  logLines.push(`${t} ${msg}`);
+  if (logLines.length > 14) logLines.shift();
+  if (DEBUG) console.log('[AR]', msg);
+  updateDebug();
+}
+
+// ---------- Собственный WebXR (Android): кольцо-указатель, постановка по касанию ----------
+// Модуль (с three.js) грузится заранее, чтобы по нажатию сразу вызвать requestSession():
+// браузер разрешает его только в обработчике жеста пользователя.
+const xr = { mod: null, supported: null, failed: false, loading: false };
+async function prepareXR() {
+  if (xr.mod || xr.loading || !isMobile || isIOS || !navigator.xr || !window.isSecureContext) {
+    if (xr.supported === null && (!navigator.xr || isIOS || !isMobile)) xr.supported = false;
+    return;
+  }
+  xr.loading = true;
+  try {
+    const mod = await import('./xr-ar.js');
+    xr.supported = await mod.isSupported();
+    xr.mod = mod;
+    dlog(`свой WebXR: ${xr.supported ? 'поддерживается' : 'immersive-ar не поддерживается'}`);
+  } catch (e) {
+    xr.supported = false;
+    dlog(`свой WebXR: ошибка загрузки — ${e.message}`);
+  }
+  xr.loading = false;
+  updateArUi();
+}
+
+function arPath() {
+  if (xr.mod && xr.supported && !xr.failed) return 'свой WebXR (hit-test + кольцо)';
+  if (isIOS) return 'model-viewer → Quick Look';
+  if (viewer.canActivateAR) return `model-viewer → ${viewer.getAttribute('ar-modes')} (первый доступный)`;
+  return 'AR недоступен (на компьютере — QR)';
+}
+
+function updateDebug() {
+  if (!DEBUG) return;
+  const panel = $('debug-panel');
+  panel.hidden = false;
+  panel.textContent = [
+    'ОТЛАДКА AR (?debug=1) — пришлите скриншот',
+    `устройство: ${isIOS ? 'iOS' : isAndroid ? 'Android' : 'другое'}${isMobile ? ', мобильное' : ''}${isInApp ? ', ВСТРОЕННЫЙ браузер' : ''}`,
+    `UA: ${ua}`,
+    `secure context: ${window.isSecureContext}, navigator.xr: ${navigator.xr ? 'есть' : 'нет'}, immersive-ar: ${xr.supported === null ? 'проверяется…' : xr.supported}`,
+    `canActivateAR (model-viewer): ${viewer.canActivateAR}`,
+    `ar-modes: ${viewer.getAttribute('ar-modes') ?? '—'}, ar-scale: ${viewer.getAttribute('ar-scale') ?? '—'}`,
+    `ar-status: ${viewer.getAttribute('ar-status') ?? '—'}, ar-tracking: ${viewer.getAttribute('ar-tracking') ?? '—'}`,
+    `режим по нажатию: ${arPath()}`,
+    `последний запуск: ${state.lastPath}`,
+    `модель: ${state.item ? modelUrl(state.item, state.variant) : '—'}`,
+    '— журнал —',
+    ...logLines,
+  ].join('\n');
+}
 
 // ---------- Каталог ----------
 function renderCatalog() {
@@ -63,6 +124,7 @@ function showProduct(item, variant) {
   setVariant(variant);
   document.title = `${item.name} — примерка в AR`;
   updateArUi();
+  prepareXR();
 }
 
 function setVariant(variant) {
@@ -100,7 +162,7 @@ function showNotice(title, text) {
 
 async function updateArUi() {
   await customElements.whenDefined('model-viewer');
-  const canAR = viewer.canActivateAR;
+  const canAR = viewer.canActivateAR || xr.supported === true;
   $('notice').hidden = true;
 
   if (canAR) {
@@ -134,7 +196,7 @@ async function updateArUi() {
 window.addEventListener('hashchange', () => {
   if (location.hash === '#model-viewer-no-ar-fallback') {
     state.sceneViewerFailed = true;
-    console.warn('[AR] Scene Viewer не открылся, следующий запуск — WebXR');
+    dlog('Scene Viewer не открылся (вернулся #model-viewer-no-ar-fallback), следующий — другой режим');
     updateArUi();
   }
 });
@@ -150,15 +212,38 @@ function failedText() {
 }
 
 $('ar-button').addEventListener('click', () => {
-  // activateAR() должен вызываться синхронно из обработчика нажатия.
+  // И requestSession(), и activateAR() должны вызываться синхронно из обработчика нажатия.
   state.arFailed = false;
   state.sceneViewerFailed = false;
+  const path = arPath();
+  state.lastPath = path;
+  dlog(`нажатие → ${path}`);
+  if (xr.mod && xr.supported && !xr.failed) {
+    xr.mod.startAR({
+      url: modelUrl(state.item, state.variant),
+      placement: state.item.placement,
+      overlay: $('xr-overlay'),
+      debugEl: DEBUG ? $('xr-debug') : null,
+      log: dlog,
+      onEnd: () => updateArUi(),
+    }).catch((e) => {
+      // Сессия не открылась вовсе → дальше пробуем режимы model-viewer. Ошибка уже внутри
+      // открытой сессии (например, модель не загрузилась) → свой режим оставляем, можно повторить.
+      if (!e.sessionStarted) xr.failed = true;
+      dlog(`свой WebXR: ${e.sessionStarted ? 'ошибка в сессии' : 'сессия не открылась'} — ${e.name}: ${e.message}`);
+      showNotice('AR в браузере не открылся',
+        'Нажмите «Посмотреть в комнате» ещё раз — попробуем другой режим. 3D-просмотр работает.');
+    });
+    return;
+  }
   viewer.activateAR();
 });
 
 viewer.addEventListener('ar-status', (e) => {
+  dlog(`model-viewer ar-status: ${e.detail.status}`);
   if (e.detail.status === 'failed') { state.arFailed = true; updateArUi(); }
 });
+viewer.addEventListener('ar-tracking', (e) => dlog(`model-viewer ar-tracking: ${e.detail.status}`));
 viewer.addEventListener('load', () => {
   $('product-view').querySelector('.progress').classList.add('done');
   updateArUi();
@@ -176,6 +261,7 @@ function renderQr() {
   const url = new URL(location.pathname, location.origin);
   url.searchParams.set('item', state.item.id);
   url.searchParams.set('v', state.variant.id);
+  if (DEBUG) url.searchParams.set('debug', '1');
   const qr = qrcode(0, 'M');
   qr.addData(url.href);
   qr.make();
@@ -206,10 +292,18 @@ document.addEventListener('click', (e) => {
   const link = e.target.closest('a[data-item], a[data-nav="catalog"]');
   if (!link || e.metaKey || e.ctrlKey || e.shiftKey) return;
   e.preventDefault();
-  history.pushState(null, '', link.dataset.item ? `?item=${link.dataset.item}` : location.pathname);
+  const next = new URLSearchParams();
+  if (link.dataset.item) next.set('item', link.dataset.item);
+  if (DEBUG) next.set('debug', '1');
+  history.pushState(null, '', next.size ? `?${next}` : location.pathname);
   route();
 });
 window.addEventListener('popstate', route);
 
 renderCatalog();
 route();
+if (DEBUG) {
+  $('ar-block').after($('debug-panel')); // сразу под кнопкой AR — удобно для скриншота
+  updateDebug();
+  setInterval(updateDebug, 1000);
+}

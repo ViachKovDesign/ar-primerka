@@ -190,6 +190,42 @@ model-viewer[ar-status="session-started"][ar-tracking="not-tracking"] .ar-chip-l
 @keyframes ar-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ar-prompt-phone { animation: none; } }
 
+/* ---------- Собственный WebXR-оверлей ---------- */
+.xr-overlay { position: fixed; inset: 0; z-index: 1000; color: #fff; font: 600 16px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; pointer-events: none; }
+.xr-overlay .xr-drag { position: absolute; inset: 0; pointer-events: auto; touch-action: none; }
+.xr-top { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.xr-center { position: absolute; left: 16px; right: 16px; bottom: 34%; display: flex; justify-content: center; }
+.xr-bottom { position: absolute; left: 16px; right: 16px; bottom: max(28px, calc(env(safe-area-inset-bottom) + 20px)); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.xr-msg {
+  display: none; align-items: center; gap: 10px; text-align: center;
+  padding: 12px 18px; border-radius: 16px; max-width: 100%;
+  background: rgba(20, 19, 17, .72); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.xr-msg-big { flex-direction: column; font-size: 18px; padding: 18px 22px; }
+.xr-msg-warn { background: rgba(160, 60, 30, .85); }
+.xr-msg strong { font-weight: 700; }
+.xr-btn {
+  pointer-events: auto; border: 0; font: inherit; color: #22201d; background: rgba(255, 255, 255, .94);
+  min-height: 48px; padding: 0 22px; border-radius: 999px; box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+}
+.xr-close { width: 48px; padding: 0; display: grid; place-items: center; margin-left: auto; }
+.xr-reset { display: none; }
+.xr-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: #fff; animation: xr-spin .8s linear infinite; }
+@keyframes xr-spin { to { transform: rotate(360deg); } }
+.xr-overlay[data-state="loading"] [data-for="loading"],
+.xr-overlay[data-state="searching"] [data-for="searching"],
+.xr-overlay[data-state="lost"] [data-for="lost"],
+.xr-overlay[data-state="ready"] [data-for="ready"],
+.xr-overlay[data-state="placed"] .xr-msg[data-for="placed"] { display: flex; }
+.xr-overlay[data-state="placed"] .xr-reset { display: inline-block; }
+.xr-debug { margin: 0; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, .6); font: 12px/1.35 ui-monospace, Consolas, monospace; white-space: pre-wrap; max-width: 75%; }
+
+/* ---------- Панель отладки (?debug=1) ---------- */
+.debug-panel {
+  margin: 0; padding: 10px 12px; border-radius: 12px; overflow-x: auto;
+  background: #1d1c1a; color: #e8ffe8; font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word;
+}
+
 /* ---------- Подвал: авторы ---------- */
 .credits summary { cursor: pointer; display: inline-block; padding: 8px 4px; }
 .credits ul { list-style: none; padding: 0; margin: 8px auto 0; max-width: 40em; display: grid; gap: 4px; }
