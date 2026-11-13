@@ -73,7 +73,7 @@ export async function guessShowcaseBg(doc, avgTextureColor, rules = BG_RULES) {
 }
 
 /** Площадь треугольников примитива после матрицы узла (4×4, column-major). */
-function primitiveArea(prim, m) {
+export function primitiveArea(prim, m) {
   const pos = prim.getAttribute('POSITION');
   if (!pos) return 0;
   const count = pos.getCount();

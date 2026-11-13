@@ -8,6 +8,7 @@ import { CATEGORIES, loadCatalog, formatPrice } from './catalog.js';
 import { guessShowcaseBg, averageLinear } from './showcase-bg.js';
 import { reduceUvSets, syncTransformTexCoords, slotLabel, readGlbJson, stripExtensionFromGlb } from './gltf-fixes.js';
 import { creditWarning, creditFields } from './credit.js';
+import { summarize, swatchesFor } from './swatch.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -520,28 +521,13 @@ async function applyManualColor(doc, matIndex, hex, threshold) {
   }
 }
 
-/** Средний цвет «основного» материала — для кружка выбора. */
-async function guessSwatch(doc, prefer) {
-  const root = doc.getRoot();
-  const weight = new Map();
-  for (const mesh of root.listMeshes()) for (const p of mesh.listPrimitives()) {
-    const m = p.getMaterial(); if (!m || (prefer?.size && !prefer.has(m))) continue;
-    weight.set(m, (weight.get(m) ?? 0) + (p.getAttribute('POSITION')?.getCount() ?? 0));
-  }
-  const mat = [...weight.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-  if (!mat) return '#cccccc';
-  const f = mat.getBaseColorFactor();
-  const tex = mat.getBaseColorTexture();
-  if (!tex) return linToHex(f.slice(0, 3));
-  try {
-    const bmp = await decodeImage(tex.getImage(), tex.getMimeType());
-    const c = new OffscreenCanvas(16, 16); const ctx = c.getContext('2d');
-    ctx.drawImage(bmp, 0, 0, 16, 16);
-    const d = ctx.getImageData(0, 0, 16, 16).data;
-    const acc = [0, 0, 0];
-    for (let i = 0; i < d.length; i += 4) { acc[0] += LIN[d[i]]; acc[1] += LIN[d[i + 1]]; acc[2] += LIN[d[i + 2]]; }
-    return linToHex(acc.map((v, k) => (v / 256) * f[k]));
-  } catch { return linToHex(f.slice(0, 3)); }
+/** Картинка → RGBA size×size (sRGB) — для расчёта цвета кружка (js/swatch.js). */
+async function decodeRgba(bytes, mime, size) {
+  const bmp = await decodeImage(bytes, mime);
+  const c = new OffscreenCanvas(size, size);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, size, size);
+  return ctx.getImageData(0, 0, size, size).data;
 }
 
 // =====================================================================
@@ -612,7 +598,9 @@ function renderVariantUi() {
   $('var-body').innerHTML = S.rows.map((r, i) => {
     const b = S.built[i];
     return `<tr>
-      <td><input type="color" data-i="${i}" data-k="swatch" value="${esc(r.swatch)}" aria-label="Цвет кружка"></td>
+      <td class="swatch-cell"><input type="color" data-i="${i}" data-k="swatch" value="${esc(r.swatch)}" aria-label="Цвет кружка" title="Цвет из модели. Нажмите, чтобы поправить">${
+        r.swatchTouched && r.autoSwatch && r.autoSwatch !== r.swatch && !(m === 'manual' && i > 0)
+          ? `<button type="button" class="btn btn-small" data-auto-swatch="${i}" title="Вернуть цвет из модели ${esc(r.autoSwatch)}"><span class="dot" style="background:${esc(r.autoSwatch)}"></span>из модели</button>` : ''}</td>
       <td><input type="text" data-i="${i}" data-k="name" value="${esc(r.name)}" aria-label="Название варианта"></td>
       <td><input type="text" data-i="${i}" data-k="id" value="${esc(r.id)}" aria-label="Код варианта" pattern="[a-z0-9\\-]+"></td>
       <td>${b ? MB(b.bytes.byteLength) : '…'}</td>
@@ -641,9 +629,19 @@ $('var-body').addEventListener('change', (e) => {
     if (S.variantMode === 'manual' && +t.dataset.i > 0) { r.src = t.value; scheduleRebuild(); }
   }
   if (S.built[+t.dataset.i]) Object.assign(S.built[+t.dataset.i], { id: r.id, name: r.name, swatch: r.swatch });
+  if (t.dataset.k === 'swatch') renderVariantUi(); // показать «из модели» рядом с поправленным цветом
   renderPreviewVariants();
 });
 $('var-body').addEventListener('click', (e) => {
+  const a = e.target.closest('[data-auto-swatch]');
+  if (a) {
+    const i = +a.dataset.autoSwatch, r = S.rows[i];
+    Object.assign(r, { swatch: r.autoSwatch, swatchTouched: false });
+    if (S.built[i]) S.built[i].swatch = r.swatch;
+    renderVariantUi();
+    renderPreviewVariants();
+    return;
+  }
   const b = e.target.closest('[data-rm]'); if (!b) return;
   S.rows.splice(+b.dataset.rm, 1); renderVariantUi(); scheduleRebuild();
 });
@@ -662,12 +660,13 @@ async function buildOne(r, st, { swatch: wantSwatch = true } = {}) {
   }
   if (S.variantMode === 'manual') prefer = new Set([doc.getRoot().listMaterials()[S.manual.material]].filter(Boolean));
   if (S.variantMode === 'manual' && r.src) await applyManualColor(doc, S.manual.material, r.src, S.manual.threshold);
-  // Цвет кружка — до исправлений: dedup может заменить объекты материалов.
-  const swatch = wantSwatch ? (r.swatchTouched ? r.swatch : await guessSwatch(doc, prefer)) : null;
+  // Сводка для цвета кружка — до исправлений: dedup может заменить объекты материалов.
+  // Сам цвет считается в rebuild() по всем вариантам сразу: так видно, какая часть модели — обивка.
+  const look = wantSwatch ? await summarize(doc, decodeRgba, prefer) : null;
   const { uvWarnings } = await applyFixes(doc, st);
   const bytes = await io.writeBinary(doc);
   const report = await L.validateBytes(bytes, { maxIssues: 50 });
-  return { src, doc, bytes, report, swatch, uvWarnings, srcErr: src.report?.issues.numErrors ?? 0 };
+  return { src, doc, bytes, report, look, uvWarnings, srcErr: src.report?.issues.numErrors ?? 0 };
 }
 
 // Шаги обработки, которые можно выключить. Если после обработки ошибок валидатора больше, чем в исходнике,
@@ -747,11 +746,18 @@ async function rebuild() {
       const r = S.rows[i];
       const res = await buildOne(r, S.st);
       if (seq !== S.buildSeq) return; // настройки поменялись — эта сборка устарела
-      if (!r.swatchTouched) r.swatch = res.swatch;
-      built.push({ id: r.id, name: r.name, swatch: r.swatch, ...res });
+      built.push({ id: r.id, name: r.name, ...res });
       built.at(-1).autoBg = (await guessShowcaseBg(res.doc, avgTextureLinear)).bg; // фон витрины
     }
     if (seq !== S.buildSeq) return;
+    // Цвет кружка из модели (обивка + ворс, см. js/swatch.js). Поправленный руками не трогаем.
+    const auto = swatchesFor(built.map((b) => b.look));
+    built.forEach((b, i) => {
+      const r = S.rows[i];
+      r.autoSwatch = auto[i];
+      if (!r.swatchTouched) r.swatch = auto[i];
+      b.swatch = r.swatch;
+    });
     const blame = await diagnose(built, seq);
     if (blame === undefined) return;
     S.blame = blame;

@@ -22,28 +22,28 @@
         {
           "id": "linen-grey",
           "name": "Светло-серый лён",
-          "swatch": "#bdb7ac",
+          "swatch": "#a59f95",
           "bg": "dark",
           "model": "models/chair/linen-grey.glb"
         },
         {
           "id": "graphite",
           "name": "Графит",
-          "swatch": "#4a4c50",
+          "swatch": "#4b4c4f",
           "bg": "light",
           "model": "models/chair/graphite.glb"
         },
         {
           "id": "mustard",
           "name": "Горчичный",
-          "swatch": "#b8892a",
+          "swatch": "#b3862c",
           "bg": "light",
           "model": "models/chair/mustard.glb"
         },
         {
           "id": "emerald",
           "name": "Изумруд",
-          "swatch": "#2f6b55",
+          "swatch": "#326954",
           "bg": "light",
           "model": "models/chair/emerald.glb"
         }
@@ -74,28 +74,28 @@
         {
           "id": "white-stone",
           "name": "Белый камень",
-          "swatch": "#e6e4df",
+          "swatch": "#dbdad5",
           "bg": "dark",
           "model": "models/coffee-table/white-stone.glb"
         },
         {
           "id": "grey-stone",
           "name": "Серый камень",
-          "swatch": "#9c9a96",
+          "swatch": "#969591",
           "bg": "light",
           "model": "models/coffee-table/grey-stone.glb"
         },
         {
           "id": "graphite",
           "name": "Графит",
-          "swatch": "#3b3c3f",
+          "swatch": "#3b3b3f",
           "bg": "light",
           "model": "models/coffee-table/graphite.glb"
         },
         {
           "id": "white-brass",
           "name": "Белый камень, латунь",
-          "swatch": "linear-gradient(135deg,#e6e4df 50%,#b8893b 50%)",
+          "swatch": "linear-gradient(135deg,#dbdad5 50%,#b68f55 50%)",
           "bg": "dark",
           "model": "models/coffee-table/white-brass.glb"
         }
@@ -219,35 +219,35 @@
         {
           "id": "champagne",
           "name": "Шампань",
-          "swatch": "#4d4538",
+          "swatch": "#7a6d61",
           "bg": "light",
           "model": "models/divan-izognutyy/champagne.glb"
         },
         {
           "id": "navy",
           "name": "Тёмно-синий",
-          "swatch": "#1f2d4f",
+          "swatch": "#23324e",
           "bg": "light",
           "model": "models/divan-izognutyy/navy.glb"
         },
         {
           "id": "gray",
           "name": "Серый",
-          "swatch": "#898982",
+          "swatch": "#b1b3b2",
           "bg": "dark",
           "model": "models/divan-izognutyy/gray.glb"
         },
         {
           "id": "black",
           "name": "Чёрный",
-          "swatch": "#191919",
+          "swatch": "#242425",
           "bg": "light",
           "model": "models/divan-izognutyy/black.glb"
         },
         {
           "id": "pale-pink",
           "name": "Бледно-розовый",
-          "swatch": "#e2c0c2",
+          "swatch": "#f9dadb",
           "bg": "dark",
           "model": "models/divan-izognutyy/pale-pink.glb"
         }
