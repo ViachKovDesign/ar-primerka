@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тест виджета на чужом сайте</title>
+  <!--
+    Локальная проверка виджета «как на сайте магазина» (другой адрес = другой origin, работает CORS):
+      1) сервер с виджетом (как GitHub Pages):  node scripts/dev-server.mjs --port=8080
+      2) «магазин»:                              node scripts/dev-server.mjs --port=8090
+      3) открыть http://localhost:8090/widget/test.html
+    Виджет и каталог страница берёт с http://localhost:8080 — то есть с другого origin.
+    На GitHub Pages эта страница бесполезна: она ссылается на localhost.
+  -->
+  <style>
+    /* Нарочно «вредные» стили магазина: не должны сломать кнопку и окно виджета. */
+    * { font-family: "Comic Sans MS", cursive !important; letter-spacing: 2px; text-transform: uppercase; box-sizing: content-box; }
+    body { margin: 0; padding: 24px; background: #fff7d6; color: #a00; line-height: 3; }
+    div { padding: 18px; border: 2px dashed #c90; }
+    button { background: lime !important; color: magenta !important; border: 4px solid red !important; border-radius: 0 !important; font-size: 30px !important; }
+    svg { display: none !important; }
+    h2 { margin: 24px 0 0; }
+    .custom { --ar-button-bg: #2f5d50; --ar-button-radius: 999px; }
+    #log { white-space: pre-wrap; font: 13px/1.4 ui-monospace, Consolas, monospace !important; text-transform: none; letter-spacing: 0; background: #fff; color: #222; padding: 12px; }
+  </style>
+  <script src="http://localhost:8080/widget/ar-viewer.js" defer></script>
+</head>
+<body>
+  <h1>Магазин мебели (тест)</h1>
+  <p>Это чужая страница с агрессивными стилями. Кнопки виджета должны выглядеть как обычно.</p>
+  <button type="button">Кнопка самого магазина</button>
+
+  <h2>1. Диван — как в инструкции</h2>
+  <div data-ar-item="divan-izognutyy"></div>
+
+  <h2>2. Кресло, вариант «Изумруд», свой текст и цвет</h2>
+  <div class="custom" data-ar-item="chair" data-ar-variant="emerald" data-ar-label="Примерить в комнате"></div>
+
+  <h2>3. Неизвестный товар — кнопки быть не должно</h2>
+  <div data-ar-item="net-takogo-tovara">(здесь пусто, в консоли — предупреждение)</div>
+
+  <h2>4. Кнопка, добавленная скриптом через 1,5 с</h2>
+  <section id="late"></section>
+
+  <h2>Журнал проверки</h2>
+  <div id="log">…</div>
+
+  <script>
+    setTimeout(() => {
+      const d = document.createElement('div');
+      d.setAttribute('data-ar-item', 'table-lamp');
+      d.setAttribute('data-ar-variant', 'terracotta');
+      document.getElementById('late').append(d);
+    }, 1500);
+
+    // Что и когда загружено с сервера виджета: до нажатия не должно быть widget/engine/ и .glb.
+    const W = 'http://localhost:8080/';
+    const seen = [];
+    new PerformanceObserver((l) => {
+      for (const e of l.getEntries()) if (e.name.startsWith(W)) seen.push(`${(e.startTime / 1000).toFixed(1)} с  ${e.name.slice(W.length)}`);
+      render();
+    }).observe({ type: 'resource', buffered: true });
+    function render() {
+      document.getElementById('log').textContent = [
+        `ARPrimerka: ${window.ARPrimerka ? 'v' + ARPrimerka.version : 'не загружен'}`,
+        `кнопок виджета: ${document.querySelectorAll('ar-primerka-button').length} (видимых: ${[...document.querySelectorAll('ar-primerka-button')].filter((b) => b.offsetWidth).length})`,
+        `cookie страницы: ${document.cookie ? document.cookie : '(нет)'}`,
+        'запросы к серверу виджета:',
+        ...seen,
+      ].join('\n');
+    }
+    setInterval(render, 1000);
+  </script>
+</body>
+</html>

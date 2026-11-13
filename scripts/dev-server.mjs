@@ -8,7 +8,11 @@ import { extname, join, normalize, resolve } from 'node:path';
 import sharp from 'sharp';
 
 const ROOT = resolve('.');
-const PORT = Number(process.env.PORT) || 8080;
+const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}`));
+const PORT = Number(arg('port=')?.split('=')[1] || process.env.PORT) || 8080;
+// Как GitHub Pages: Access-Control-Allow-Origin: * — нужно виджету на чужом сайте (widget/test.html).
+// --no-cors выключает заголовок, чтобы проверить, что без него виджет честно сообщает об ошибке.
+const CORS = arg('no-cors') ? {} : { 'Access-Control-Allow-Origin': '*' };
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -46,9 +50,9 @@ createServer(async (req, res) => {
     if (!path.startsWith(ROOT)) { res.writeHead(403).end(); return; }
     if ((await stat(path).catch(() => null))?.isDirectory()) path = join(path, 'index.html');
     const data = await readFile(path);
-    res.writeHead(200, { 'Content-Type': TYPES[extname(path).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    res.writeHead(200, { 'Content-Type': TYPES[extname(path).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache', ...CORS });
     res.end(data);
   } catch {
-    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Не найдено');
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', ...CORS }).end('Не найдено');
   }
-}).listen(PORT, () => console.log(`http://localhost:${PORT}`));
+}).listen(PORT, () => console.log(`http://localhost:${PORT}${CORS['Access-Control-Allow-Origin'] ? '' : ' (без CORS)'}`));

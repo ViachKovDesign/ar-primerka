@@ -12,7 +12,8 @@
     "vendor": "node scripts/copy-vendor.mjs && npm run admin-libs",
     "build": "npm run vendor && npm run models",
     "serve": "node scripts/dev-server.mjs",
-    "admin-libs": "esbuild scripts/admin-libs-entry.mjs --bundle --format=esm --platform=browser --minify --external:node:* --external:fs --external:path --outfile=vendor/admin-libs.js --log-level=warning"
+    "admin-libs": "esbuild scripts/admin-libs-entry.mjs --bundle --format=esm --platform=browser --minify --external:node:* --external:fs --external:path --outfile=vendor/admin-libs.js --log-level=warning",
+    "widget": "node scripts/build-widget.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",

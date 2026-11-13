@@ -21,6 +21,8 @@ CC0 не требует указывать авторство, но мы ука�
 | qrcode-generator | 2.0.4 | Kazuhiko Arase | MIT (`vendor/LICENSE-qrcode-generator.txt`) | https://github.com/kazuhikoarase/qrcode-generator |
 | three.js (+ GLTFLoader, RoomEnvironment) | 0.183.2 | three.js authors | MIT (`vendor/LICENSE-three.txt`) | https://github.com/mrdoob/three.js |
 
+Виджет для сайтов магазинов (`widget/engine/`, `npm run widget`) — те же три библиотеки и `js/xr-ar.js`, собранные esbuild в модули, которые грузятся по нажатию; новых зависимостей нет.
+
 `<model-viewer>` подключён модульной сборкой (`model-viewer-module.min.js`), которая использует ту же копию three.js.
 Собственный WebXR-режим (`js/xr-ar.js`) основан на официальном примере three.js
 [webxr_ar_hittest](https://github.com/mrdoob/three.js/blob/r183/examples/webxr_ar_hittest.html) (MIT).
