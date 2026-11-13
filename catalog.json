@@ -240,7 +240,7 @@
         {
           "id": "black",
           "name": "Чёрный",
-          "swatch": "#575758",
+          "swatch": "#2b2b2c",
           "bg": "light",
           "model": "models/divan-izognutyy/black.glb"
         },

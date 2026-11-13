@@ -123,7 +123,8 @@
       "black": {
         "model": "models/divan-izognutyy/black.glb",
         "sha256": "a31eb2277336a47c94b05530d76612abb193711d0c9ef0a33ec74b703c6ba998",
-        "render": "#575758"
+        "render": "#575758",
+        "manual": "чёрный бархат: светлые пятна ворса поднимают средний цвет на рендере до тёмно-серого (#575758), и кружок выглядел «не чёрным». Кружок задан вручную (#2b2b2c) по решению владельца каталога"
       },
       "pale-pink": {
         "model": "models/divan-izognutyy/pale-pink.glb",
