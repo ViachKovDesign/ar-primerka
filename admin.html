@@ -54,6 +54,12 @@
         <span>или нажмите, чтобы выбрать. Несколько файлов = по файлу на вариант (<code>артикул__вариант.glb</code>).</span>
       </label>
       <p class="admin-status" id="load-status" hidden></p>
+      <label class="field credit-field">
+        <span class="label">Автор и лицензия модели <span class="note">— необязательно</span></span>
+        <input type="text" id="f-credit" autocomplete="off" placeholder="«Glam Velvet Sofa» © 2021 Wayfair LLC, CC BY 4.0">
+        <span class="note">Покажется мелким шрифтом в окне примерки и в подвале сайта. Для лицензий CC BY обязательно: автор, название, лицензия. Если в файле есть строка copyright, она подставится сама.</span>
+        <span class="note warn" id="credit-warn" role="status" hidden></span>
+      </label>
     </section>
 
     <div id="work" hidden>
@@ -190,6 +196,7 @@
           <button type="button" class="btn btn-primary" id="export-zip" aria-describedby="export-reason">Добавить в каталог и скачать ZIP</button>
           <span class="note err" id="export-reason" role="status" hidden></span>
         </div>
+        <p class="note warn" id="credit-warn-export" hidden></p>
         <p class="admin-status" id="export-status" hidden></p>
         <div class="howto" id="howto" hidden>
           <h3>Как опубликовать</h3>

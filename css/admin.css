@@ -45,6 +45,8 @@
 .fix-grid, .form-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .field { display: grid; gap: 6px; align-content: start; min-width: 0; }
 .field-wide { grid-column: 1 / -1; }
+.credit-field { margin-top: 14px; max-width: 640px; }
+.credit-field .label .note { font-weight: 400; }
 .label { font-size: 13px; color: var(--muted); }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .inline { display: inline-flex; align-items: center; gap: 6px; }

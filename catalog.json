@@ -48,6 +48,9 @@
           "model": "models/chair/emerald.glb"
         }
       ],
+      "credit": "3D-модель «Arm Chair 01», Kirill Sannikov, Poly Haven, CC0. Изменена: ткань перекрашена в 4 варианта, текстуры 1k.",
+      "credit_url": "https://polyhaven.com/a/ArmChair_01",
+      "credit_license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": {
         "origin": "Poly Haven ArmChair_01 (CC0)"
       }

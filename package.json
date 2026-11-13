@@ -8,7 +8,7 @@
     "fetch": "node scripts/fetch-sources.mjs",
     "models": "node scripts/build-models.mjs && node scripts/make-lamps.mjs && node scripts/check-sizes.mjs && node scripts/validate-models.mjs",
     "validate": "node scripts/validate-models.mjs",
-    "test": "node --test scripts/test-admin.mjs scripts/test-showcase-bg.mjs",
+    "test": "node --test scripts/test-admin.mjs scripts/test-showcase-bg.mjs scripts/test-credit.mjs",
     "vendor": "node scripts/copy-vendor.mjs && npm run admin-libs",
     "build": "npm run vendor && npm run models",
     "serve": "node scripts/dev-server.mjs",

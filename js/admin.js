@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { CATEGORIES, loadCatalog, formatPrice } from './catalog.js';
 import { guessShowcaseBg, averageLinear } from './showcase-bg.js';
 import { reduceUvSets, syncTransformTexCoords, slotLabel, readGlbJson, stripExtensionFromGlb } from './gltf-fixes.js';
+import { creditWarning, creditFields } from './credit.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -153,6 +154,7 @@ async function loadSources(list) {
       const json = readGlbJson(bytes);
       src.ext = json.extensionsUsed ?? [];
       src.required = json.extensionsRequired ?? [];
+      src.copyright = String(json.asset?.copyright ?? '').trim();
     } catch { /* не GLB — скажет чтение ниже */ }
     try {
       src.report = await L.validateBytes(bytes, { maxIssues: 200 });
@@ -181,6 +183,7 @@ async function loadSources(list) {
   autoSettings();
   setupVariantMode();
   prefillCard();
+  prefillCredit();
   $('work').hidden = false;
   syncControls();
   rebuild();
@@ -1000,6 +1003,26 @@ $('f-name').addEventListener('input', () => {
 $('f-id').addEventListener('input', () => { $('f-id').dataset.auto = '0'; });
 $('f-id').addEventListener('change', () => { $('f-id').value = slug($('f-id').value); });
 
+// Автор и лицензия модели (шаг 1) → поле credit в catalog.json. Строка copyright из GLB
+// подставляется сама, пока поле не правили руками. CC BY без автора — предупреждение (не запрет).
+const fileCopyright = () => S.sources.map((s) => s.copyright).find(Boolean) ?? '';
+function prefillCredit() {
+  const f = $('f-credit');
+  if (!f.value.trim() || f.dataset.auto === '1') {
+    f.value = fileCopyright();
+    f.dataset.auto = f.value ? '1' : '0';
+  }
+  updateCreditWarning();
+}
+function updateCreditWarning() {
+  const w = creditWarning($('f-credit').value, fileCopyright());
+  for (const id of ['credit-warn', 'credit-warn-export']) {
+    $(id).hidden = !w;
+    $(id).textContent = w ? `⚠ ${w}` : '';
+  }
+}
+$('f-credit').addEventListener('input', () => { $('f-credit').dataset.auto = '0'; updateCreditWarning(); });
+
 // =====================================================================
 // 6. Выгрузка: ZIP = catalog.json + models/<id>/<вариант>.glb + posters/<id>.webp
 // =====================================================================
@@ -1027,6 +1050,9 @@ $('export-zip').addEventListener('click', async () => {
       poster: `posters/${id}.webp`,
       bg: bgFor(0),
       variants: S.built.map((b, i) => ({ id: slug(S.rows[i].id), name: S.rows[i].name, swatch: S.rows[i].swatch, bg: bgFor(i), model: `models/${id}/${slug(S.rows[i].id)}.glb` })),
+      ...creditFields($('f-credit').value),
+      // Ссылку на страницу модели админка не спрашивает: при замене товара сохраняем прежнюю.
+      ...(exists?.credit_url && $('f-credit').value.trim() ? { credit_url: exists.credit_url } : {}),
       source: { files: S.sources.map((s) => s.name), added: new Date().toISOString().slice(0, 10) },
     };
     const catalog = catalogForExport(item);
