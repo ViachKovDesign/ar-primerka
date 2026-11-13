@@ -245,7 +245,7 @@ Draco (`KHR_draco_mesh_compression`) Scene Viewer, вероятно, подде�
 | 4. Выгрузка ZIP (`catalog.json` + модели + постер + инструкция), правка и удаление товаров, «Скачать catalog.json» | ✅ локально | ZIP распакован в копию сайта — новый товар открылся с ценой, вариантами и правильными цветами |
 | 5. iPhone: готовые USDZ — только если тест покажет проблему | ⏳ ждёт теста на iPhone | — |
 | 6. Публикация v2 на Pages | ⏳ ждёт «да» | — |
-| 7. Виджет для сайта магазина (`widget/ar-viewer.js`, ветка `widget-embed`): кнопка по `data-ar-item`, Shadow DOM, движок по нажатию, Android/iPhone/компьютер+QR; инструкция `EMBED.md` | ✅ локально, ⏳ телефоны и публикация | Чужой origin (порты 8080/8090), без CORS, вредные стили, эмуляция Android — см. `REPORT.md` |
+| 7. Виджет для сайта магазина (`widget/ar-viewer.js`, ветка `widget-embed`): кнопка по `data-ar-item`, Shadow DOM, движок по нажатию, Android/iPhone/компьютер+QR; инструкция `EMBED.md` | ✅ опубликован на Pages 13.11.2026, ⏳ проверка на Android и iPhone | Чужой origin (порты 8080/8090), без CORS, вредные стили, эмуляция Android — см. `REPORT.md` |
 
 **Тестовые модели** (`node scripts/make-test-assets.mjs`):
 

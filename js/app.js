@@ -325,6 +325,21 @@ function renderQr() {
   $('qr-local').hidden = !isLocal;
 }
 
+// ---------- Подвал: указание авторов моделей из catalog.json ----------
+function renderCredits() {
+  const list = $('credits-list');
+  for (const item of CATALOG.filter((it) => it.credit)) {
+    const li = document.createElement('li');
+    li.textContent = `${item.name} — ${item.credit}`;
+    for (const [url, text] of [[item.credit_url, 'источник'], [item.credit_license_url, 'лицензия']]) {
+      if (!url) continue;
+      const a = Object.assign(document.createElement('a'), { href: url, textContent: text, rel: 'noopener' });
+      li.append(' · ', a);
+    }
+    list.prepend(li);
+  }
+}
+
 // ---------- Маршрутизация (?item=…&v=…) ----------
 function route() {
   const params = new URLSearchParams(location.search);
@@ -364,6 +379,7 @@ try {
 }
 renderFilters();
 renderCatalog();
+renderCredits();
 route();
 if (DEBUG) {
   $('ar-block').after($('debug-panel')); // сразу под кнопкой AR — удобно для скриншота

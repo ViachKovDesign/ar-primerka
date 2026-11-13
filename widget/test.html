@@ -3,46 +3,79 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Тест виджета на чужом сайте</title>
+  <title>Тест виджета AR-примерки</title>
+  <meta name="robots" content="noindex">
   <!--
-    Локальная проверка виджета «как на сайте магазина» (другой адрес = другой origin, работает CORS):
-      1) сервер с виджетом (как GitHub Pages):  node scripts/dev-server.mjs --port=8080
-      2) «магазин»:                              node scripts/dev-server.mjs --port=8090
+    Страница проверки виджета «как на сайте магазина».
+
+    С телефона: https://viachkovdesign.github.io/ar-primerka/widget/test.html?ar-debug=1
+      Виджет берётся с GitHub Pages. Журнал внизу страницы заменяет консоль: пришлите его скриншот.
+
+    Локально, на «чужом» домене (другой порт = другой origin, проверяется CORS):
+      1) сервер виджета (как GitHub Pages):  node scripts/dev-server.mjs --port=8080
+      2) «магазин»:                           node scripts/dev-server.mjs --port=8090
       3) открыть http://localhost:8090/widget/test.html
-    Виджет и каталог страница берёт с http://localhost:8080 — то есть с другого origin.
-    На GitHub Pages эта страница бесполезна: она ссылается на localhost.
+      Без заголовка CORS (кнопок быть не должно): первый сервер с флагом --no-cors.
   -->
   <style>
     /* Нарочно «вредные» стили магазина: не должны сломать кнопку и окно виджета. */
-    * { font-family: "Comic Sans MS", cursive !important; letter-spacing: 2px; text-transform: uppercase; box-sizing: content-box; }
-    body { margin: 0; padding: 24px; background: #fff7d6; color: #a00; line-height: 3; }
-    div { padding: 18px; border: 2px dashed #c90; }
-    button { background: lime !important; color: magenta !important; border: 4px solid red !important; border-radius: 0 !important; font-size: 30px !important; }
+    * { font-family: "Comic Sans MS", cursive !important; letter-spacing: 1px; text-transform: uppercase; box-sizing: content-box; }
+    body { margin: 0; padding: 16px; background: #fff7d6; color: #a00; line-height: 2; }
+    div { padding: 12px; border: 2px dashed #c90; }
+    button { background: lime !important; color: magenta !important; border: 4px solid red !important; border-radius: 0 !important; font-size: 22px !important; }
     svg { display: none !important; }
-    h2 { margin: 24px 0 0; }
+    h1 { font-size: 22px; line-height: 1.3; }
+    h2 { margin: 20px 0 0; font-size: 15px; line-height: 1.4; }
     .custom { --ar-button-bg: #2f5d50; --ar-button-radius: 999px; }
-    #log { white-space: pre-wrap; font: 13px/1.4 ui-monospace, Consolas, monospace !important; text-transform: none; letter-spacing: 0; background: #fff; color: #222; padding: 12px; }
+    #log { white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.45 ui-monospace, Consolas, monospace !important; text-transform: none; letter-spacing: 0; background: #fff; color: #222; }
   </style>
-  <script src="http://localhost:8080/widget/ar-viewer.js" defer></script>
+  <script>
+    // Журнал на странице: на телефоне консоли нет. Перехватываем сообщения виджета и ошибки.
+    window.__log = [];
+    const add = (kind, args) => {
+      const text = args.map((a) => (a && a.message) || (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+      if (kind !== 'info' || text.includes('[AR-примерка]')) window.__log.push(`${(performance.now() / 1000).toFixed(1)} с  ${kind}: ${text}`);
+    };
+    for (const kind of ['info', 'warn', 'error']) {
+      const orig = console[kind].bind(console);
+      console[kind] = (...args) => { add(kind, args); orig(...args); };
+    }
+    addEventListener('error', (e) => add('error', [e.message || `не загрузился ${e.target?.src || e.target?.href || ''}`]), true);
+    addEventListener('unhandledrejection', (e) => add('error', [e.reason]));
+
+    // Откуда брать виджет: локально — с другого порта (проверка CORS), на сайте — с GitHub Pages.
+    const local = ['localhost', '127.0.0.1'].includes(location.hostname);
+    const s = document.createElement('script');
+    s.src = local ? 'http://localhost:8080/widget/ar-viewer.js'
+      : 'https://viachkovdesign.github.io/ar-primerka/widget/ar-viewer.js';
+    s.defer = true;
+    document.head.append(s);
+  </script>
 </head>
 <body>
-  <h1>Магазин мебели (тест)</h1>
-  <p>Это чужая страница с агрессивными стилями. Кнопки виджета должны выглядеть как обычно.</p>
+  <h1>Магазин мебели (тестовая страница)</h1>
+  <p>Чужая страница с нарочно испорченными стилями. Кнопки и окно виджета должны выглядеть нормально.</p>
   <button type="button">Кнопка самого магазина</button>
 
-  <h2>1. Диван — как в инструкции</h2>
+  <h2>1. Диван — как в инструкции (CC BY: внизу окна подпись автора)</h2>
   <div data-ar-item="divan-izognutyy"></div>
 
-  <h2>2. Кресло, вариант «Изумруд», свой текст и цвет</h2>
+  <h2>2. Кресло «Изумруд», свой текст и цвет кнопки</h2>
   <div class="custom" data-ar-item="chair" data-ar-variant="emerald" data-ar-label="Примерить в комнате"></div>
 
-  <h2>3. Неизвестный товар — кнопки быть не должно</h2>
-  <div data-ar-item="net-takogo-tovara">(здесь пусто, в консоли — предупреждение)</div>
+  <h2>3. Журнальный стол</h2>
+  <div data-ar-item="coffee-table"></div>
 
-  <h2>4. Кнопка, добавленная скриптом через 1,5 с</h2>
+  <h2>4. Торшер</h2>
+  <div data-ar-item="floor-lamp"></div>
+
+  <h2>5. Настольная лампа «Терракота» — на стол; кнопка добавляется скриптом через 1,5 с</h2>
   <section id="late"></section>
 
-  <h2>Журнал проверки</h2>
+  <h2>6. Неизвестный товар — кнопки быть не должно</h2>
+  <div data-ar-item="net-takogo-tovara">(здесь пусто, в журнале — предупреждение)</div>
+
+  <h2>Журнал (пришлите скриншот)</h2>
   <div id="log">…</div>
 
   <script>
@@ -54,22 +87,23 @@
     }, 1500);
 
     // Что и когда загружено с сервера виджета: до нажатия не должно быть widget/engine/ и .glb.
-    const W = 'http://localhost:8080/';
-    const seen = [];
-    new PerformanceObserver((l) => {
-      for (const e of l.getEntries()) if (e.name.startsWith(W)) seen.push(`${(e.startTime / 1000).toFixed(1)} с  ${e.name.slice(W.length)}`);
-      render();
-    }).observe({ type: 'resource', buffered: true });
+    const W = new URL('../', document.querySelector('script[src*="ar-viewer.js"]')?.src || 'https://viachkovdesign.github.io/ar-primerka/widget/').href;
     function render() {
+      const res = performance.getEntriesByType('resource').filter((e) => e.name.startsWith(W))
+        .map((e) => `${(e.startTime / 1000).toFixed(1)} с  ${e.name.slice(W.length).split('?')[0]}${e.transferSize ? `  ${Math.round(e.transferSize / 1024)} КБ` : ''}`);
+      const btns = [...document.querySelectorAll('ar-primerka-button')];
       document.getElementById('log').textContent = [
-        `ARPrimerka: ${window.ARPrimerka ? 'v' + ARPrimerka.version : 'не загружен'}`,
-        `кнопок виджета: ${document.querySelectorAll('ar-primerka-button').length} (видимых: ${[...document.querySelectorAll('ar-primerka-button')].filter((b) => b.offsetWidth).length})`,
-        `cookie страницы: ${document.cookie ? document.cookie : '(нет)'}`,
-        'запросы к серверу виджета:',
-        ...seen,
+        `виджет: ${window.ARPrimerka ? 'v' + ARPrimerka.version : 'не загружен'} с ${W}`,
+        `кнопок: ${btns.length}, видимых: ${btns.filter((b) => b.offsetWidth).length} (должно быть 5)`,
+        `cookie: ${document.cookie || '(нет)'}`,
+        `браузер: ${navigator.userAgent}`,
+        `https: ${window.isSecureContext}, WebXR: ${navigator.xr ? 'есть' : 'нет'}, Quick Look: ${document.createElement('a').relList.supports?.('ar') ? 'есть' : 'нет'}`,
+        '— сообщения —', ...(window.__log.length ? window.__log : ['(нет)']),
+        '— загрузки с сервера виджета —', ...res,
       ].join('\n');
     }
     setInterval(render, 1000);
+    render();
   </script>
 </body>
 </html>

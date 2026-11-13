@@ -25,6 +25,9 @@
   const ENGINE = new URL('engine/', BASE);
   const DEFAULT_CATALOG = new URL(script?.dataset.catalog || '../catalog.json', BASE).href;
   const LOG = '[AR-примерка]';
+  // ?ar-debug=1 в адресе страницы: подробный журнал AR в консоль (для проверки на телефоне).
+  const DEBUG = /[?&]ar-debug(=|&|$)/.test(location.search);
+  const dlog = DEBUG ? (msg) => console.info(LOG, msg) : () => {};
 
   // ---------- Устройство (как в демо, js/app.js) ----------
   const ua = navigator.userAgent;
@@ -210,6 +213,7 @@
     .notice strong { display: block; margin-bottom: 2px; color: #4a3311; }
     .notice p { margin: 0; }
     .credit { font-size: 12px; }
+    .credit a { color: inherit; text-decoration: underline; }
 
     @media (min-width: 760px) and (min-height: 480px) {
       .dialog { width: min(980px, calc(100vw - 48px)); height: min(640px, calc(100dvh - 48px)); border-radius: 20px;
@@ -353,6 +357,7 @@
         notFound ? `Нет файла ${new URL(src).pathname.split('/').slice(-2).join('/')}. Сообщите, пожалуйста, магазину.` : 'Проверьте интернет и попробуйте ещё раз.');
     });
     mv.addEventListener('ar-status', (e) => {
+      dlog(`model-viewer ar-status: ${e.detail.status}`);
       if (e.detail.status === 'failed') { S.arFailed = true; updateArUi(); }
     });
   }
@@ -410,8 +415,7 @@
       box.append(label);
     }
     q('.ar-hint').textContent = cat.hint;
-    q('.credit').textContent = item.credit || '';
-    q('.credit').hidden = !item.credit;
+    renderCredit(q('.credit'), item);
     mv.setAttribute('ar-placement', cat.placement);
     mv.setAttribute('ar-modes', S.svFailed ? 'webxr quick-look' : AR_MODES);
     mv.setAttribute('alt', `${item.name || item.id}: 3D-модель`); // атрибут, не свойство: элемент ещё не «оживлён»
@@ -443,6 +447,17 @@
     }
     updateArUi();
     if (!isMobile) renderQr();
+  }
+
+  // Указание автора (обязательно для моделей CC BY): поля credit, credit_url, credit_license_url в catalog.json.
+  function renderCredit(el, item) {
+    el.textContent = item.credit || '';
+    el.hidden = !item.credit;
+    for (const [url, text] of [[item.credit_url, 'источник'], [item.credit_license_url, 'лицензия']]) {
+      if (!url) continue;
+      const a = Object.assign(document.createElement('a'), { href: url, textContent: text, target: '_blank', rel: 'noopener' });
+      el.append(' · ', a);
+    }
   }
 
   function close() {
@@ -511,12 +526,14 @@
     const { mv } = M;
     S.arFailed = false;
     S.msg = null;
+    dlog(`нажатие AR: ${xr.mod && xr.supported && !xr.failed ? 'свой WebXR' : `model-viewer (${mv.getAttribute('ar-modes')}), canActivateAR=${mv.canActivateAR}`}; ` +
+      `устройство: ${isIOS ? 'iOS' : isAndroid ? 'Android' : 'другое'}${isInApp ? ', встроенный браузер' : ''}; secure=${window.isSecureContext}, xr=${Boolean(navigator.xr)}, immersive-ar=${xr.supported}`);
     if (xr.mod && xr.supported && !xr.failed) {
       xr.mod.startAR({
         url: S.variant.modelUrl,
         placement: S.item.category,
         overlay: M.overlay,
-        log: () => {},
+        log: dlog,
         onEnd: () => updateArUi(),
       }).catch((e) => {
         if (!e.sessionStarted) xr.failed = true; // дальше — режимы model-viewer

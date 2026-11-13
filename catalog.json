@@ -254,7 +254,10 @@
           "GlamVelvetSofa.glb"
         ],
         "added": "2026-11-11"
-      }
+      },
+      "credit": "3D-модель «Glam Velvet Sofa» © 2021 Wayfair LLC, CC BY 4.0. Изменена: обивки разделены на отдельные файлы, текстуры перекодированы.",
+      "credit_url": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/GlamVelvetSofa",
+      "credit_license_url": "https://creativecommons.org/licenses/by/4.0/"
     }
   ]
 }
