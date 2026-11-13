@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Кружки по рендеру</title>
+  <meta name="robots" content="noindex">
+  <script type="importmap">{ "imports": { "three": "../vendor/three/build/three.module.min.js", "three/addons/": "../vendor/three/examples/jsm/" } }</script>
+  <script type="module" src="../vendor/model-viewer-module.min.js"></script>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #faf8f4; color: #22201d; }
+    table { border-collapse: collapse; margin: 12px 0; }
+    td, th { padding: 4px 10px; border-bottom: 1px solid #e4ded4; text-align: left; font-variant-numeric: tabular-nums; }
+    .dot { display: inline-block; width: 22px; height: 22px; border-radius: 50%; vertical-align: middle; border: 1px solid #0002; margin-right: 6px; }
+    .bad { color: #9b2414; font-weight: 600; }
+    .manual { color: #6d675f; }
+    button { font: inherit; padding: 8px 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Кружки по рендеру</h1>
+  <p>Служебная страница (локально: <code>npm run serve</code> → <code>/tools/swatches.html</code>). Рендерит каждый вариант каталога
+    при нейтральном свете той же камерой, что окно виджета, и берёт средний цвет освещённой ткани (<code>js/swatch-render.js</code>).
+    Результат — <code>tools/swatch-renders.json</code>: по нему тест <code>npm test</code> проверяет кружки в <code>catalog.json</code>.
+    Если модель поменялась — откройте страницу, скачайте файл и положите его в <code>tools/</code>.</p>
+  <p id="status">Рендерим…</p>
+  <table id="out"><thead><tr><th>Товар / вариант</th><th>В каталоге</th><th>На экране</th><th>ΔE</th><th></th></tr></thead><tbody></tbody></table>
+  <button type="button" id="dl" disabled>Скачать swatch-renders.json</button>
+  <script type="module">
+    import { renderSwatches, VIEW, LIT } from '../js/swatch-render.js';
+    import { deltaE, hexToLin, linToHex } from '../js/swatch.js';
+
+    const MAX_DE = 10;
+    // Кружки, которые оставлены руками (рендер под углом окна вводит в заблуждение).
+    const prev = await fetch('swatch-renders.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const cat = await (await fetch('../catalog.json', { cache: 'no-store' })).json();
+    const sha256 = async (url) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', await (await fetch(url, { cache: 'no-store' })).arrayBuffer()))]
+      .map((b) => b.toString(16).padStart(2, '0')).join('');
+    const mean = (sw) => { const s = String(sw).match(/#[0-9a-f]{6}/gi) ?? []; return s.length ? linToHex([0, 1, 2].map((k) => s.reduce((a, h) => a + hexToLin(h)[k], 0) / s.length)) : null; };
+
+    const result = { view: VIEW, lit: LIT, items: {} };
+    const rows = [];
+    for (const it of cat.items) {
+      const sw = await renderSwatches(it.variants.map((v) => `../${v.model}`));
+      result.items[it.id] = {};
+      for (const [i, v] of it.variants.entries()) {
+        const manual = prev?.items?.[it.id]?.[v.id]?.manual;
+        result.items[it.id][v.id] = { model: v.model, sha256: await sha256(`../${v.model}`), render: sw[i], ...(manual ? { manual } : {}) };
+        const shown = mean(v.swatch);
+        const de = shown && sw[i] ? deltaE(shown, sw[i]) : NaN;
+        rows.push(`<tr><td>${it.id} / ${v.id}</td><td><span class="dot" style="background:${v.swatch}"></span>${shown ?? v.swatch}</td>
+          <td><span class="dot" style="background:${sw[i]}"></span>${sw[i]}</td>
+          <td class="${manual ? 'manual' : de > MAX_DE ? 'bad' : ''}">${Number.isFinite(de) ? de.toFixed(1) : '—'}</td>
+          <td class="manual">${manual ? `вручную: ${manual}` : ''}</td></tr>`);
+      }
+    }
+    document.querySelector('#out tbody').innerHTML = rows.join('');
+    document.getElementById('status').textContent = 'Готово.';
+    window.__swatchRenders = result;
+    const dl = document.getElementById('dl');
+    dl.disabled = false;
+    dl.onclick = () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2) + '\n'], { type: 'application/json' }));
+      a.download = 'swatch-renders.json';
+      a.click();
+    };
+  </script>
+</body>
+</html>

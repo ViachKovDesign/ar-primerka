@@ -7,6 +7,7 @@
 .admin-status { padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; }
 .admin-status.err { background: #fdecea; border-color: #f3c3bd; color: #7a1f14; }
 .admin-status.ok { background: #eaf6ee; border-color: #bfe3c9; color: #1f5b33; }
+.admin-status.warn { background: #fbf3e6; border-color: #ecd9b5; color: #6b4a1a; }
 .admin-status.busy::before {
   content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -1px;
   border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--ink); animation: xr-spin .8s linear infinite;

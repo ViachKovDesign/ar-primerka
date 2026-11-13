@@ -1,0 +1,135 @@
+{
+  "view": {
+    "environment-image": "neutral",
+    "exposure": "1.05",
+    "shadow-intensity": "0",
+    "camera-orbit": "-25deg 75deg auto",
+    "interaction-prompt": "none",
+    "loading": "eager"
+  },
+  "lit": [
+    0.4,
+    0.95
+  ],
+  "items": {
+    "chair": {
+      "linen-grey": {
+        "model": "models/chair/linen-grey.glb",
+        "sha256": "0778c3712dd117d41f488d945c3c93d0b41dc1df0b45914021e06605e830ca1e",
+        "render": "#d2cabf"
+      },
+      "graphite": {
+        "model": "models/chair/graphite.glb",
+        "sha256": "4c6818bd87b3fa9f6a366e76a35d9fc37bc6c70c5739adaee80e1b6ee97bfab3",
+        "render": "#606166"
+      },
+      "mustard": {
+        "model": "models/chair/mustard.glb",
+        "sha256": "246131d83ead4cd7f4d4f953ff1a462400b039837c194582645f331ded19f1d4",
+        "render": "#e3aa3a"
+      },
+      "emerald": {
+        "model": "models/chair/emerald.glb",
+        "sha256": "8b8b324e8dc009f67f4c23333dd408f291a6428abee4be27f90100f3e95f2a53",
+        "render": "#3e866b"
+      }
+    },
+    "coffee-table": {
+      "white-stone": {
+        "model": "models/coffee-table/white-stone.glb",
+        "sha256": "7bad9495cbd9bfc365e51cc298519a3b2cb93b4ba2f91726a298d19daa82e991",
+        "render": "#f5f4ef",
+        "manual": "глянцевая столешница: под углом окна в ней отражается небо, и рендер получается намного светлее камня (Графит → #a8a8aa). Кружок — цвет камня из модели"
+      },
+      "grey-stone": {
+        "model": "models/coffee-table/grey-stone.glb",
+        "sha256": "24d4214022294a6920c020f14e669c5f6e15bc18a2ac34487191c1cd76b5d7b5",
+        "render": "#bebdb8",
+        "manual": "глянцевая столешница: под углом окна в ней отражается небо, и рендер получается намного светлее камня (Графит → #a8a8aa). Кружок — цвет камня из модели"
+      },
+      "graphite": {
+        "model": "models/coffee-table/graphite.glb",
+        "sha256": "c27a5d4ea8ea2cef7f7388aa67166093f0cbb7e3e44d28d7a933f21f3ad26738",
+        "render": "#a8a8aa",
+        "manual": "глянцевая столешница: под углом окна в ней отражается небо, и рендер получается намного светлее камня (Графит → #a8a8aa). Кружок — цвет камня из модели"
+      },
+      "white-brass": {
+        "model": "models/coffee-table/white-brass.glb",
+        "sha256": "8797bc4571e02cf94c6705953f46321759a8d4bc8533cb0e225ee4075838c4d1",
+        "render": "#e2d2be",
+        "manual": "глянцевая столешница: под углом окна в ней отражается небо, и рендер получается намного светлее камня (Графит → #a8a8aa). Кружок — цвет камня из модели"
+      }
+    },
+    "floor-lamp": {
+      "white-linen": {
+        "model": "models/floor-lamp/white-linen.glb",
+        "sha256": "31b57c17f880c64228711cd9c2156ee50638657744a7ce32a97ecd40e9379177",
+        "render": "#f5eddd"
+      },
+      "sand": {
+        "model": "models/floor-lamp/sand.glb",
+        "sha256": "6e158c4d9f2083198699275a2f0da493a278ae01ccf9cfc453dc9ce84f19e3bb",
+        "render": "#eed1a4"
+      },
+      "sage": {
+        "model": "models/floor-lamp/sage.glb",
+        "sha256": "2e8f4167fd89a2e723a62c328a15b3015dae9a3df714c857881d9aef9c9233fe",
+        "render": "#b5c6aa"
+      },
+      "black": {
+        "model": "models/floor-lamp/black.glb",
+        "sha256": "d4d443a2ff13508f7b3012f19be1e23521e97e9aa1aeb44bbde402db87da7a8d",
+        "render": "#2c2c2f"
+      }
+    },
+    "table-lamp": {
+      "white": {
+        "model": "models/table-lamp/white.glb",
+        "sha256": "0425093438c38f148356fc082db86ef5ec290a330b2f03ece2bad0e4558bd816",
+        "render": "#f7f4ed"
+      },
+      "terracotta": {
+        "model": "models/table-lamp/terracotta.glb",
+        "sha256": "f52584e45bed54f6aa63e8e8ef670bf6e9c3c9421b4159218159a474b391703e",
+        "render": "#e0784f"
+      },
+      "sage": {
+        "model": "models/table-lamp/sage.glb",
+        "sha256": "6ce3a6848b2f0a4f0f179a753960ac2f9d77cc7f2ba9c2c883a2cbdf97e3bf1c",
+        "render": "#b4c8ad"
+      },
+      "black": {
+        "model": "models/table-lamp/black.glb",
+        "sha256": "35f37ee738a2bda6d61f5ff32f6adf38abe453d064dc15177287fb9030720f11",
+        "render": "#38383a"
+      }
+    },
+    "divan-izognutyy": {
+      "champagne": {
+        "model": "models/divan-izognutyy/champagne.glb",
+        "sha256": "e64b958b9932d224618e4fa997188caffbf0eb07a7b3af91dfb20d81e6b5ec2a",
+        "render": "#b6a291"
+      },
+      "navy": {
+        "model": "models/divan-izognutyy/navy.glb",
+        "sha256": "00751980811d579915282d7442a6921ffb43e9ef77b1efa20a6bd9f700b7dece",
+        "render": "#2c538a"
+      },
+      "gray": {
+        "model": "models/divan-izognutyy/gray.glb",
+        "sha256": "6100a9c962aa9359ee7a5988376965a5ee6d11ccd2214198c436b43725e85c97",
+        "render": "#e4e7ea"
+      },
+      "black": {
+        "model": "models/divan-izognutyy/black.glb",
+        "sha256": "a31eb2277336a47c94b05530d76612abb193711d0c9ef0a33ec74b703c6ba998",
+        "render": "#575758"
+      },
+      "pale-pink": {
+        "model": "models/divan-izognutyy/pale-pink.glb",
+        "sha256": "05d665b7e5abad0a6b250e511599c0022421818b984b9e47e02552bd0e9557a8",
+        "render": "#fae0e1"
+      }
+    }
+  }
+}

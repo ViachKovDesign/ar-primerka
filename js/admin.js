@@ -8,7 +8,8 @@ import { CATEGORIES, loadCatalog, formatPrice } from './catalog.js';
 import { guessShowcaseBg, averageLinear } from './showcase-bg.js';
 import { reduceUvSets, syncTransformTexCoords, slotLabel, readGlbJson, stripExtensionFromGlb } from './gltf-fixes.js';
 import { creditWarning, creditFields } from './credit.js';
-import { summarize, swatchesFor } from './swatch.js';
+import { summarize, swatchesFor, fabricNames } from './swatch.js';
+import { renderSwatches } from './swatch-render.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -598,9 +599,9 @@ function renderVariantUi() {
   $('var-body').innerHTML = S.rows.map((r, i) => {
     const b = S.built[i];
     return `<tr>
-      <td class="swatch-cell"><input type="color" data-i="${i}" data-k="swatch" value="${esc(r.swatch)}" aria-label="Цвет кружка" title="Цвет из модели. Нажмите, чтобы поправить">${
+      <td class="swatch-cell"><input type="color" data-i="${i}" data-k="swatch" value="${esc(r.swatch)}" aria-label="Цвет кружка" title="Цвет варианта на экране. Нажмите, чтобы поправить">${
         r.swatchTouched && r.autoSwatch && r.autoSwatch !== r.swatch && !(m === 'manual' && i > 0)
-          ? `<button type="button" class="btn btn-small" data-auto-swatch="${i}" title="Вернуть цвет из модели ${esc(r.autoSwatch)}"><span class="dot" style="background:${esc(r.autoSwatch)}"></span>из модели</button>` : ''}</td>
+          ? `<button type="button" class="btn btn-small" data-auto-swatch="${i}" title="Вернуть цвет с экрана ${esc(r.autoSwatch)}"><span class="dot" style="background:${esc(r.autoSwatch)}"></span>из модели</button>` : ''}</td>
       <td><input type="text" data-i="${i}" data-k="name" value="${esc(r.name)}" aria-label="Название варианта"></td>
       <td><input type="text" data-i="${i}" data-k="id" value="${esc(r.id)}" aria-label="Код варианта" pattern="[a-z0-9\\-]+"></td>
       <td>${b ? MB(b.bytes.byteLength) : '…'}</td>
@@ -667,6 +668,36 @@ async function buildOne(r, st, { swatch: wantSwatch = true } = {}) {
   const bytes = await io.writeBinary(doc);
   const report = await L.validateBytes(bytes, { maxIssues: 50 });
   return { src, doc, bytes, report, look, uvWarnings, srcErr: src.report?.issues.numErrors ?? 0 };
+}
+
+/**
+ * Цвет кружков «как на экране»: рендер готовых вариантов при нейтральном свете, средний цвет
+ * освещённой ткани (js/swatch-render.js). Если рендер недоступен — остаётся цвет по материалу.
+ */
+async function renderAutoSwatches(seq) {
+  const built = S.built;
+  const urls = built.map((b) => URL.createObjectURL(new Blob([b.bytes], { type: 'model/gltf-binary' })));
+  status('swatch-status', 'Цвет кружков: смотрим, как варианты выглядят на экране…', 'busy');
+  try {
+    const fabric = built.length === 1 && built[0].look ? fabricNames(built[0].look) : [];
+    const sw = await renderSwatches(urls, { fabric });
+    if (seq !== S.buildSeq) return;
+    sw.forEach((hex, i) => {
+      if (!hex) return;
+      const r = S.rows[i];
+      r.autoSwatch = hex;
+      if (!r.swatchTouched) { r.swatch = hex; built[i].swatch = hex; }
+    });
+    status('swatch-status', sw.every(Boolean) ? ''
+      : 'Цвет некоторых кружков взят из материала: на рендере не удалось выделить ткань. Проверьте и поправьте вручную.', 'warn');
+    renderVariantUi();
+    renderPreviewVariants();
+  } catch (e) {
+    console.warn('Рендер кружков:', e);
+    if (seq === S.buildSeq) status('swatch-status', `Цвет кружков взят из материала: рендер недоступен (${e.message}). Проверьте и при необходимости поправьте вручную.`, 'warn');
+  } finally {
+    urls.forEach((u) => URL.revokeObjectURL(u));
+  }
 }
 
 // Шаги обработки, которые можно выключить. Если после обработки ошибок валидатора больше, чем в исходнике,
@@ -750,7 +781,8 @@ async function rebuild() {
       built.at(-1).autoBg = (await guessShowcaseBg(res.doc, avgTextureLinear)).bg; // фон витрины
     }
     if (seq !== S.buildSeq) return;
-    // Цвет кружка из модели (обивка + ворс, см. js/swatch.js). Поправленный руками не трогаем.
+    // Цвет кружка, сначала — по материалу (обивка + ворс, js/swatch.js); после сборки его уточняет
+    // рендер (renderAutoSwatches). Поправленный руками не трогаем.
     const auto = swatchesFor(built.map((b) => b.look));
     built.forEach((b, i) => {
       const r = S.rows[i];
@@ -771,6 +803,7 @@ async function rebuild() {
     renderVariantUi();
     renderPreviewVariants();
     fillDims();
+    S.swatchJob = renderAutoSwatches(seq);
     await showPreview();
   } catch (e) {
     console.error(e);
@@ -1043,6 +1076,7 @@ $('export-zip').addEventListener('click', async () => {
 
   status('export-status', 'Готовим архив…', 'busy');
   try {
+    await S.swatchJob; // кружки по рендеру должны успеть посчитаться
     const poster = await makePoster();
     const price = $('f-price').value === '' ? null : Number($('f-price').value);
     const item = {

@@ -72,6 +72,7 @@ async function texture(tex, decode) {
 async function materialSummary(mat, decode) {
   const sheen = mat.getExtension?.('KHR_materials_sheen') ?? null;
   return {
+    name: mat.getName(),
     factor: mat.getBaseColorFactor().slice(0, 3),
     tex: await texture(mat.getBaseColorTexture(), decode),
     sheen: sheen ? {
@@ -163,8 +164,17 @@ export function swatchesFor(list) {
   return list.map((v) => linToHex(mainColor(v)));
 }
 
+/** Имена материалов обивки (для рендера одиночного варианта, js/swatch-render.js). */
+export function fabricNames(look) {
+  return [...new Set(mainSlots(look.slots).map((s) => s.mat.name).filter(Boolean))];
+}
+
 /** Один вариант: материал из prefer, иначе самый большой по площади. */
 function mainColor({ slots }) {
+  return weighted(mainSlots(slots).map((s) => ({ area: s.area, rgb: materialColor(s.mat) })));
+}
+
+function mainSlots(slots) {
   let pick = slots.filter((s) => s.preferred);
   if (!pick.length) {
     const byMat = new Map();
@@ -172,7 +182,7 @@ function mainColor({ slots }) {
     const top = [...byMat.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
     pick = slots.filter((s) => s.mat === top);
   }
-  return weighted(pick.map((s) => ({ area: s.area, rgb: materialColor(s.mat) })));
+  return pick;
 }
 
 /** Разница цветов ΔE (CIE76, Lab) — для проверки «кружок совпадает с моделью». */
